@@ -1,0 +1,118 @@
+[
+ {
+  "ticket_id": "T-001",
+  "channel": "email",
+  "subject": "Cannot log in",
+  "body": "I have been trying to sign in since this morning.",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-002",
+  "channel": "chat",
+  "subject": "",
+  "body": "my deploy keeps failing at health check",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-003",
+  "channel": "docs_comment",
+  "subject": "Pagination example",
+  "body": "The cursor example on this page returns 400.",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-004",
+  "channel": "forum",
+  "subject": "Webhook retries",
+  "body": "How many times are webhooks retried?",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ }
+]
