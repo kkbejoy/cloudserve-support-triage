@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "run_at": "2026-11-16 23:49",
+    "tickets": "data\\development_tickets.json",
+    "model": "all-MiniLM-L6-v2"
+  },
+  "results": {
+    "section": {
+      "answerable_tickets": 357,
+      "unanswerable_tickets": 143,
+      "hit@1": 0.905,
+      "hit@3": 0.958,
+      "hit@5": 0.986,
+      "mrr": 0.936,
+      "best_score_answerable": {
+        "min": 0.255,
+        "p25": 0.551,
+        "median": 0.609,
+        "p75": 0.672,
+        "max": 0.878
+      },
+      "best_score_unanswerable": {
+        "min": 0.108,
+        "p25": 0.513,
+        "median": 0.598,
+        "p75": 0.659,
+        "max": 0.798
+      },
+      "threshold_table": [
+        {
+          "threshold": 0.2,
+          "answerable_kept": 1.0,
+          "unanswerable_rejected": 0.049
+        },
+        {
+          "threshold": 0.25,
+          "answerable_kept": 0.989,
+          "unanswerable_rejected": 0.063
+        },
+        {
+          "threshold": 0.3,
+          "answerable_kept": 0.958,
+          "unanswerable_rejected": 0.112
+        },
+        {
+          "threshold": 0.35,
+          "answerable_kept": 0.941,
+          "unanswerable_rejected": 0.147
+        },
+        {
+          "threshold": 0.4,
+          "answerable_kept": 0.936,
+          "unanswerable_rejected": 0.147
+        },
+        {
+          "threshold": 0.45,
+          "answerable_kept": 0.905,
+          "unanswerable_rejected": 0.154
+        },
+        {
+          "threshold": 0.5,
+          "answerable_kept": 0.818,
+          "unanswerable_rejected": 0.231
+        },
+        {
+          "threshold": 0.55,
+          "answerable_kept": 0.7,
+          "unanswerable_rejected": 0.357
+        },
+        {
+          "threshold": 0.6,
+          "answerable_kept": 0.513,
+          "unanswerable_rejected": 0.503
+        },
+        {
+          "threshold": 0.65,
+          "answerable_kept": 0.3,
+          "unanswerable_rejected": 0.692
+        },
+        {
+          "threshold": 0.7,
+          "answerable_kept": 0.157,
+          "unanswerable_rejected": 0.874
+        }
+      ]
+    },
+    "whole": {
+      "answerable_tickets": 357,
+      "unanswerable_tickets": 143,
+      "hit@1": 0.874,
+      "hit@3": 0.958,
+      "hit@5": 0.972,
+      "mrr": 0.921,
+      "best_score_answerable": {
+        "min": 0.23,
+        "p25": 0.508,
+        "median": 0.566,
+        "p75": 0.644,
+        "max": 0.808
+      },
+      "best_score_unanswerable": {
+        "min": 0.079,
+        "p25": 0.47,
+        "median": 0.537,
+        "p75": 0.611,
+        "max": 0.739
+      },
+      "threshold_table": [
+        {
+          "threshold": 0.2,
+          "answerable_kept": 0.978,
+          "unanswerable_rejected": 0.07
+        },
+        {
+          "threshold": 0.25,
+          "answerable_kept": 0.958,
+          "unanswerable_rejected": 0.091
+        },
+        {
+          "threshold": 0.3,
+          "answerable_kept": 0.947,
+          "unanswerable_rejected": 0.119
+        },
+        {
+          "threshold": 0.35,
+          "answerable_kept": 0.936,
+          "unanswerable_rejected": 0.133
+        },
+        {
+          "threshold": 0.4,
+          "answerable_kept": 0.916,
+          "unanswerable_rejected": 0.147
+        },
+        {
+          "threshold": 0.45,
+          "answerable_kept": 0.84,
+          "unanswerable_rejected": 0.224
+        },
+        {
+          "threshold": 0.5,
+          "answerable_kept": 0.737,
+          "unanswerable_rejected": 0.364
+        },
+        {
+          "threshold": 0.55,
+          "answerable_kept": 0.504,
+          "unanswerable_rejected": 0.58
+        },
+        {
+          "threshold": 0.6,
+          "answerable_kept": 0.322,
+          "unanswerable_rejected": 0.72
+        },
+        {
+          "threshold": 0.65,
+          "answerable_kept": 0.221,
+          "unanswerable_rejected": 0.846
+        },
+        {
+          "threshold": 0.7,
+          "answerable_kept": 0.132,
+          "unanswerable_rejected": 0.909
+        }
+      ]
+    },
+    "fixed": {
+      "answerable_tickets": 357,
+      "unanswerable_tickets": 143,
+      "hit@1": 0.888,
+      "hit@3": 0.95,
+      "hit@5": 0.972,
+      "mrr": 0.926,
+      "best_score_answerable": {
+        "min": 0.22,
+        "p25": 0.532,
+        "median": 0.583,
+        "p75": 0.652,
+        "max": 0.874
+      },
+      "best_score_unanswerable": {
+        "min": 0.104,
+        "p25": 0.489,
+        "median": 0.56,
+        "p75": 0.636,
+        "max": 0.784
+      },
+      "threshold_table": [
+        {
+          "threshold": 0.2,
+          "answerable_kept": 1.0,
+          "unanswerable_rejected": 0.049
+        },
+        {
+          "threshold": 0.25,
+          "answerable_kept": 0.966,
+          "unanswerable_rejected": 0.063
+        },
+        {
+          "threshold": 0.3,
+          "answerable_kept": 0.961,
+          "unanswerable_rejected": 0.112
+        },
+        {
+          "threshold": 0.35,
+          "answerable_kept": 0.938,
+          "unanswerable_rejected": 0.133
+        },
+        {
+          "threshold": 0.4,
+          "answerable_kept": 0.922,
+          "unanswerable_rejected": 0.147
+        },
+        {
+          "threshold": 0.45,
+          "answerable_kept": 0.891,
+          "unanswerable_rejected": 0.147
+        },
+        {
+          "threshold": 0.5,
+          "answerable_kept": 0.787,
+          "unanswerable_rejected": 0.259
+        },
+        {
+          "threshold": 0.55,
+          "answerable_kept": 0.619,
+          "unanswerable_rejected": 0.455
+        },
+        {
+          "threshold": 0.6,
+          "answerable_kept": 0.417,
+          "unanswerable_rejected": 0.678
+        },
+        {
+          "threshold": 0.65,
+          "answerable_kept": 0.23,
+          "unanswerable_rejected": 0.783
+        },
+        {
+          "threshold": 0.7,
+          "answerable_kept": 0.101,
+          "unanswerable_rejected": 0.93
+        }
+      ]
+    }
+  }
+}
