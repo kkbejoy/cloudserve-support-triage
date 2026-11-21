@@ -22,11 +22,18 @@ from src.route import Router, RoutingDecision
 logger = logging.getLogger(__name__)
 
 
+# Final action per ticket. Until answer drafting and guardrails exist (B-08/B-09), a ticket the
+# router clears is "pending_answer": NOT sent and NOT counted as resolved.
+FINAL_ACTIONS = ("auto_respond", "escalate", "block", "pending_answer")
+
+
 class TicketOutcome(BaseModel):
     ticket_id: str
     classification: Optional[Classification] = None
     retrieval: Optional[RetrievalResult] = None
     routing: RoutingDecision
+    final_action: str = "escalate"
+    error: Optional[str] = None
 
 
 class Pipeline:
@@ -87,8 +94,9 @@ class Pipeline:
                                            reason="An internal error occurred while processing this ticket, "
                                                   "so it was passed to a person.", requirement_ids=["FR-04"])
             self._log_routing(run_id, t, retrieval, decision, error)
-            outcomes.append(TicketOutcome(ticket_id=t.ticket_id, classification=c,
-                                          retrieval=retrieval, routing=decision))
+            final = "escalate" if decision.action == "escalate" else "pending_answer"
+            outcomes.append(TicketOutcome(ticket_id=t.ticket_id, classification=c, retrieval=retrieval,
+                                          routing=decision, final_action=final, error=error))
         return outcomes
 
 
