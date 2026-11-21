@@ -77,7 +77,7 @@ class Classifier:
         path = Path(model_path or s.classifier_path)
         if not path.exists():
             raise RuntimeError(f"Classifier model not found at {path}. "
-                               f"Run: python -m scripts.train_classifier")
+                               "Run: python -m scripts.setup   (trains it; or python -m scripts.train_classifier)")
         self.bundle: Dict[str, Any] = joblib.load(path)
         self.feature = self.bundle["feature"]                  # "embedding" or "text"
         self.floor = s.classifier_floor if floor is None else floor
