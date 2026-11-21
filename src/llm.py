@@ -86,7 +86,7 @@ class OpenAICompatibleLLM:
     """Groq / OpenRouter client with cache, retries, pacing and a circuit breaker."""
 
     def __init__(self, settings: Optional[Settings] = None, provider: Optional[str] = None,
-                 use_cache: bool = True) -> None:
+                 use_cache: bool = True, model: Optional[str] = None) -> None:
         import requests  # in requirements.txt; imported here so tests without network don't need it
 
         self._requests = requests
@@ -99,7 +99,7 @@ class OpenAICompatibleLLM:
         cfg = PROVIDERS[prov]
         self.provider, self.url = prov, cfg["url"]
         self._key = _key_from_env(cfg["key"])
-        self.model = s.model_name or cfg["default_model"]
+        self.model = model or s.model_name or cfg["default_model"]
         self.name = f"{prov}:{self.model}"
         self.timeout, self.max_retries = s.llm_timeout_s, s.llm_max_retries
         self.min_interval = float(s.llm_min_interval_s) if s.llm_min_interval_s else cfg["min_interval_s"]

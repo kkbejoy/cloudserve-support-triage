@@ -8,3 +8,8 @@ __pycache__/
 
 # harness run outputs (regenerate with python -m evaluation.harness)
 evaluation/results/run_*/
+
+# private working notes (not for GitHub)
+docs/known_issues.md
+# prompt comparison outputs (re-create with python -m scripts.compare_prompts)
+evaluation/results/prompt_comparison_*

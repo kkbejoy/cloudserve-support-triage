@@ -16,6 +16,31 @@ GROUP_FIELDS = ("channel", "customer_tier", "customer_region", "language_fluency
 CLEARED = ("pending_answer", "drafted", "auto_respond")
 
 
+def _validation(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Guardrails (B-09): what they blocked, and the safety numbers that matter most."""
+    val = [r for r in rows if r.get("validation_ran")]
+    if not val:
+        return {"ran": False}
+    sent = [r for r in rows if r["final_action"] == "auto_respond"]
+    ans = [r for r in val if r.get("answerable_from_docs") is True]
+    not_ans = [r for r in val if r.get("answerable_from_docs") is False]
+    return {
+        "ran": True,
+        "drafts_checked": len(val),
+        "passed": sum(1 for r in val if r.get("validation_passed")),
+        "blocked_by_check": dict(Counter(g for r in val for g in r.get("guardrails_fired", []))),
+        "fact_check_tokens": sum(r.get("grounding_tokens") or 0 for r in val),
+        # safety: answers that went out although the label says a person should have handled it
+        "sent_but_labelled_escalate": sum(1 for r in sent if r.get("expected_route") == "escalate"),
+        "sent_but_labelled_not_answerable": sum(1 for r in sent if r.get("answerable_from_docs") is False),
+        # how much of the gap the guardrails closed, and what it cost in good answers
+        "not_answerable_checked": len(not_ans),
+        "not_answerable_blocked": sum(1 for r in not_ans if not r.get("validation_passed")),
+        "answerable_checked": len(ans),
+        "answerable_blocked": sum(1 for r in ans if not r.get("validation_passed")),
+    }
+
+
 def _generation(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     """How well answer drafting closes the answerability gap (PR-02's answerable flag)."""
     gen = [r for r in rows if r.get("generation_ran")]
@@ -120,13 +145,15 @@ def compute(rows: List[Dict[str, Any]], reconciliation: Dict[str, Any], run_info
             "escalated": acts["escalate"],
             "escalated_not_answerable": sum(1 for r in rows if r.get("rule") == "not_answerable"),
             "blocked_by_guardrails": acts["block"],
+            "provider_unavailable": sum(1 for r in rows if r.get("provider_unavailable")),
             "processing_errors": sum(1 for r in rows if r.get("error")),
+            "degraded_run": sum(1 for r in rows if r.get("provider_unavailable")) > 0.05 * n if n else False,
         },
         "business": {
             "first_contact_resolution": _pct(auto, n),
             "first_contact_resolution_note": (
-                "Counts only answers actually sent. Drafted answers awaiting guardrails and tickets pending the "
-                "answer step are not resolved."),
+                "Counts only answers actually sent (passed every guardrail). Blocked drafts, drafts without "
+                "guardrails and tickets pending the answer step are not resolved."),
             "cleared_for_answer_rate": _pct(len(cleared), n),
             "escalation_rate": _pct(acts["escalate"] + acts["block"], n),
             "response_time_ms": {"mean": round(statistics.mean(lat), 1) if lat else None,
@@ -146,6 +173,7 @@ def compute(rows: List[Dict[str, Any]], reconciliation: Dict[str, Any], run_info
                     (r["expected_route"] == "auto_respond") for r in labelled), len(labelled)),
             "cleared_but_expected_escalate": sum(1 for r in cleared if r.get("expected_route") == "escalate"),
             "generation": _generation(rows),
+            "validation": _validation(rows),
             "latency_ms": {"median": _percentile(lat, 0.5), "p95": _percentile(lat, 0.95),
                            "max": round(max(lat), 1) if lat else None},
         },
@@ -187,6 +215,19 @@ def _gen_md(gen: Dict[str, Any], p) -> List[str]:
             f"| Draft cites an expected article | {p(gen['citation_matches_expected_doc'])} |"]
 
 
+def _val_md(val: Dict[str, Any]) -> List[str]:
+    if not val.get("ran"):
+        return ["| Guardrails | not run |"]
+    return [f"| Drafts checked by guardrails / passed (sent) | {val['drafts_checked']} / {val['passed']} |",
+            f"| Blocked, by check | {val['blocked_by_check'] or 'none'} |",
+            f"| **Sent but labelled escalate** (safety) | {val['sent_but_labelled_escalate']} |",
+            f"| Sent but labelled not answerable | {val['sent_but_labelled_not_answerable']} |",
+            f"| Not-answerable drafts blocked | {val['not_answerable_blocked']} of {val['not_answerable_checked']} |",
+            f"| Answerable drafts blocked (lost automatic answers) | {val['answerable_blocked']} of "
+            f"{val['answerable_checked']} |",
+            f"| Fact-check tokens | {val['fact_check_tokens']} |"]
+
+
 def to_markdown(m: Dict[str, Any]) -> str:
     def p(v):
         return "-" if v is None else f"{100 * v:.1f}%"
@@ -215,6 +256,7 @@ def to_markdown(m: Dict[str, Any]) -> str:
           f"| Routing agreement with expected route | {p(t['routing_agreement_with_expected_route'])} |",
           f"| Cleared but labelled 'escalate' | {t['cleared_but_expected_escalate']} |",
           *_gen_md(t.get("generation") or {}, p),
+          *_val_md(t.get("validation") or {}),
           f"| Latency median / p95 / max (ms) | {t['latency_ms']['median']} / {t['latency_ms']['p95']} / "
           f"{t['latency_ms']['max']} |", "",
           "## Governance", "", "| Measure | Value |", "|---|---|",

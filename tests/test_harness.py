@@ -1,5 +1,6 @@
 """Evaluation harness (B-05; FR-11, A9, A10; test T-11). Offline with the fake embedder."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -9,6 +10,8 @@ from src.chunking import chunk_documents, load_docs
 from src.classify import Classifier
 from src.config import Settings
 from src.generate import Generator
+from src.guardrails import Guardrails
+from src.llm import LLMReply
 from src.logging_store import DecisionLog
 from src.retrieve import Retriever
 from src.route import Router
@@ -32,8 +35,9 @@ def parts(tmp_path_factory):
     train(str(d / "in.json"), str(d / "clf.joblib"), str(d / "res"), embedder=emb, n_splits=3)
     build_collection(get_client(str(d / "chroma")), "section", chunk_documents(load_docs(DOCS), "section"), emb)
 
-    def make(llm=None):
-        return dict(generator=Generator(llm=llm or FakeLLM(REFUSE, ANSWER)),
+    def make(llm=None, validate=False, guard_llm=None):
+        return dict(generator=Generator(llm=llm or FakeLLM(REFUSE, ANSWER)), validate=validate,
+                    guardrails=Guardrails(llm=guard_llm, confidence_threshold=0.0, enabled=True) if guard_llm else None,
                     classifier=Classifier(model_path=str(d / "clf.joblib"), embedder=emb),
                     retriever=Retriever(embedder=emb, chroma_path=str(d / "chroma"), docs_path=str(DOCS),
                                         strategy="section", threshold=0.1),
@@ -103,3 +107,47 @@ def test_T11d_model_setup_error_stops_the_run(parts, tmp_path):
 
     m = run(str(d / "in.json"), str(tmp_path / "out2"), **make(Flaky(ANSWER)))   # outage: run continues
     assert m["volume"]["drafted_awaiting_validation"] > 0
+
+
+class CitingFake:
+    """Drafts an answer citing the first article in the prompt; as fact-checker, says the given
+    verdict for every sentence. Lets the full pipeline run offline end to end."""
+    name = "fake:citing"
+
+    def __init__(self, verdict="yes"):
+        self.verdict, self.prompts = verdict, []
+
+    def complete(self, prompt, max_tokens=600):
+        import re
+        self.prompts.append(prompt)
+        if "<sentences>" in prompt:
+            n = len(re.findall(r"^\d+\. ", prompt.split("<sentences>")[-1], re.M))
+            body = {"sentences": [{"n": i, "supported": self.verdict, "unsupported_part": ""}
+                                  for i in range(1, n + 1)]}
+        else:
+            doc = re.search(r"^\[(DOC-[A-Z0-9-]+)\]", prompt.split("<passages>")[-1], re.M).group(1)
+            body = {"answerable": True, "answer": f"Follow the steps in the article [{doc}].",
+                    "cited_doc_ids": [doc], "uncertainty": ""}
+        return LLMReply(text=json.dumps(body), model=self.name)
+
+
+def test_T11e_guardrails_send_supported_answers_and_block_unsupported(parts, tmp_path):
+    d, make = parts
+    m = run(str(d / "in.json"), str(tmp_path / "ok"), **make(CitingFake(), True, CitingFake("yes")))
+    v, val = m["volume"], m["technical"]["validation"]
+    assert val["ran"] and val["drafts_checked"] > 0 and val["passed"] == val["drafts_checked"]
+    assert v["answered_automatically"] == val["passed"] and v["drafted_awaiting_validation"] == 0
+    assert m["business"]["first_contact_resolution"] > 0
+    assert "validation" in m["governance"]["decisions_logged_by_stage"] and m["governance"]["log_reconciled"]
+    rows = [json.loads(ln) for ln in (Path(m["run"]["output_dir"]) / "responses.jsonl").read_text().splitlines()]
+    assert all(r["answer"] and "prepared automatically" in r["answer"] for r in rows
+               if r["final_action"] == "auto_respond")
+
+    m = run(str(d / "in.json"), str(tmp_path / "bad"), **make(CitingFake(), True, CitingFake("no")))
+    v, val = m["volume"], m["technical"]["validation"]
+    assert v["answered_automatically"] == 0 and v["blocked_by_guardrails"] == val["drafts_checked"] > 0
+    assert val["blocked_by_check"] == {"grounding": val["drafts_checked"]}
+    rows = [json.loads(ln) for ln in (Path(m["run"]["output_dir"]) / "responses.jsonl").read_text().splitlines()]
+    blocked = [r for r in rows if r["final_action"] == "block"]
+    assert all(r["answer"] is None and r["acknowledgement"] and r["escalation_note"]["draft_answer"]
+               and r["guardrails_fired"] == ["grounding"] for r in blocked)
