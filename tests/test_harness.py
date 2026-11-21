@@ -122,11 +122,12 @@ class CitingFake:
         self.prompts.append(prompt)
         if "<sentences>" in prompt:
             n = len(re.findall(r"^\d+\. ", prompt.split("<sentences>")[-1], re.M))
-            body = {"sentences": [{"n": i, "supported": self.verdict, "unsupported_part": ""}
+            doc = re.search(r"^\[(DOC-[A-Z0-9-]+)\]", prompt.split("<passages>")[-1], re.M).group(1)
+            body = {"sentences": [{"n": i, "supported": self.verdict, "doc_id": doc, "unsupported_part": ""}
                                   for i in range(1, n + 1)]}
         else:
             doc = re.search(r"^\[(DOC-[A-Z0-9-]+)\]", prompt.split("<passages>")[-1], re.M).group(1)
-            body = {"answerable": True, "answer": f"Follow the steps in the article [{doc}].",
+            body = {"answerable": True, "answer": "Follow the steps in the article. Then try again.",
                     "cited_doc_ids": [doc], "uncertainty": ""}
         return LLMReply(text=json.dumps(body), model=self.name)
 
@@ -140,8 +141,10 @@ def test_T11e_guardrails_send_supported_answers_and_block_unsupported(parts, tmp
     assert m["business"]["first_contact_resolution"] > 0
     assert "validation" in m["governance"]["decisions_logged_by_stage"] and m["governance"]["log_reconciled"]
     rows = [json.loads(ln) for ln in (Path(m["run"]["output_dir"]) / "responses.jsonl").read_text().splitlines()]
-    assert all(r["answer"] and "prepared automatically" in r["answer"] for r in rows
-               if r["final_action"] == "auto_respond")
+    sent = [r for r in rows if r["final_action"] == "auto_respond"]
+    assert sent and all("prepared automatically" in r["answer"] and r["citations_added"] == 2 for r in sent)
+    assert all(r["answer"].split("\n")[0].count("[DOC-") == 2 for r in sent)     # code cited both sentences
+    assert val["sent_with_citations_added_by_code"] == len(sent)
 
     m = run(str(d / "in.json"), str(tmp_path / "bad"), **make(CitingFake(), True, CitingFake("no")))
     v, val = m["volume"], m["technical"]["validation"]

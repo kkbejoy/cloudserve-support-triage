@@ -30,6 +30,7 @@ def _validation(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         "passed": sum(1 for r in val if r.get("validation_passed")),
         "blocked_by_check": dict(Counter(g for r in val for g in r.get("guardrails_fired", []))),
         "fact_check_tokens": sum(r.get("grounding_tokens") or 0 for r in val),
+        "sent_with_citations_added_by_code": sum(1 for r in sent if r.get("citations_added")),
         # safety: answers that went out although the label says a person should have handled it
         "sent_but_labelled_escalate": sum(1 for r in sent if r.get("expected_route") == "escalate"),
         "sent_but_labelled_not_answerable": sum(1 for r in sent if r.get("answerable_from_docs") is False),
@@ -225,6 +226,7 @@ def _val_md(val: Dict[str, Any]) -> List[str]:
             f"| Not-answerable drafts blocked | {val['not_answerable_blocked']} of {val['not_answerable_checked']} |",
             f"| Answerable drafts blocked (lost automatic answers) | {val['answerable_blocked']} of "
             f"{val['answerable_checked']} |",
+            f"| Sent answers where code added citations | {val['sent_with_citations_added_by_code']} |",
             f"| Fact-check tokens | {val['fact_check_tokens']} |"]
 
 

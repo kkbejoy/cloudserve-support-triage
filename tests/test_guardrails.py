@@ -8,8 +8,8 @@ from src.guardrails import Guardrails, find_private_data, find_scope_problems, s
 from src.llm import LLMUnavailable
 from tests.test_generate import FakeLLM, _art, _ticket
 
-SUPPORTED = {"sentences": [{"n": 1, "supported": "yes", "unsupported_part": ""},
-                           {"n": 2, "supported": "yes", "unsupported_part": ""}]}
+SUPPORTED = {"sentences": [{"n": 1, "supported": "yes", "doc_id": "DOC-T-LOGIN", "unsupported_part": ""},
+                           {"n": 2, "supported": "yes", "doc_id": "DOC-T-LOGIN", "unsupported_part": ""}]}
 
 
 def _cls(conf=0.95):
@@ -30,8 +30,10 @@ def _guard(*replies, **kw):
 def test_T09a_clean_grounded_draft_passes_and_uses_one_fact_check_call():
     g = _guard()
     v = g.check(_ticket(), _draft(), [_art()], _cls())
-    assert v.passed and v.failed_check is None and v.prompt_version == "PR-04 v1.1"
-    assert [c.name for c in v.checks] == ["policy", "private_data", "scope_tone", "citations", "grounding"]
+    assert v.passed and v.failed_check is None and v.prompt_version == "PR-04 v1.2"
+    assert [c.name for c in v.checks] == ["policy", "private_data", "scope_tone", "citations", "grounding",
+                                          "citation_coverage"]
+    assert v.cited_answer == _draft().answer and v.citations_added == 0      # model's own citations kept
     assert len(g.llm.prompts) == 1
     p = g.llm.prompts[0]
     assert "1. Accounts lock after five failed attempts." in p and "[DOC-T-LOGIN] Login problems" in p
@@ -67,11 +69,44 @@ def test_T09d_promises_and_refunds_block_dev0011_style():
         assert v.failed_check == "scope_tone", bad
 
 
-def test_T09e_missing_or_foreign_citations_block():
-    v = _guard().check(_ticket(), _draft("Accounts lock after five failed attempts.", cited=()), [_art()], _cls())
-    assert v.failed_check == "citations" and "no help article" in v.reason
+def test_T09e_foreign_citation_blocks():
     v = _guard().check(_ticket(), _draft("Accounts lock [DOC-T-BILLING]."), [_art()], _cls())
     assert v.failed_check == "citations" and "DOC-T-BILLING" in v.reason
+
+
+def test_T09k_code_adds_missing_citations_dev0011_style():
+    d = _draft("Accounts lock after five failed attempts. They unlock automatically after thirty minutes.", cited=())
+    v = _guard().check(_ticket(), d, [_art()], _cls())
+    assert v.passed and v.citations_added == 2 and v.cited_doc_ids == ["DOC-T-LOGIN"]
+    assert v.cited_answer == ("Accounts lock after five failed attempts [DOC-T-LOGIN]. "
+                              "They unlock automatically after thirty minutes [DOC-T-LOGIN].")
+
+
+def test_T09l_two_articles_each_sentence_gets_the_one_the_fact_check_named():
+    a, b = _art("DOC-A", "Locks"), _art("DOC-B", "Sessions")
+    d = Draft(answerable=True, answer="Accounts lock after five attempts. Clear your cookies [DOC-B].",
+              cited_doc_ids=["DOC-B"], passage_doc_ids=["DOC-A", "DOC-B"])
+    named = {"sentences": [{"n": 1, "supported": "yes", "doc_id": "DOC-A"},
+                           {"n": 2, "supported": "yes", "doc_id": "DOC-B"}]}
+    v = _guard(named).check(_ticket(), d, [a, b], _cls())
+    assert v.passed and v.cited_answer == "Accounts lock after five attempts [DOC-A]. Clear your cookies [DOC-B]."
+    assert v.cited_doc_ids == ["DOC-A", "DOC-B"]
+    # fact-check names no article (or one not sent) and two were sent -> cannot cite -> blocked
+    unnamed = {"sentences": [{"n": 1, "supported": "yes", "doc_id": "DOC-ZZZ"},
+                             {"n": 2, "supported": "yes", "doc_id": ""}]}
+    v = _guard(unnamed).check(_ticket(), d, [a, b], _cls())
+    assert v.failed_check == "citation_coverage" and "Sentence 1" in v.reason and v.cited_answer is None
+
+
+def test_T09m_greeting_needs_no_citation_but_an_answer_of_only_greetings_is_blocked():
+    d = _draft("Thanks for getting in touch. Accounts lock after five failed attempts.", cited=())
+    ok = {"sentences": [{"n": 1, "supported": "no_claim"}, {"n": 2, "supported": "yes", "doc_id": "DOC-T-LOGIN"}]}
+    v = _guard(ok).check(_ticket(), d, [_art()], _cls())
+    assert v.passed and v.cited_answer == ("Thanks for getting in touch. "
+                                           "Accounts lock after five failed attempts [DOC-T-LOGIN].")
+    only = {"sentences": [{"n": 1, "supported": "no_claim"}]}
+    v = _guard(only).check(_ticket(), _draft("Thanks for getting in touch.", cited=()), [_art()], _cls())
+    assert v.failed_check == "citation_coverage"
 
 
 def test_T09f_unsupported_or_partial_sentence_blocks_with_the_words_named():

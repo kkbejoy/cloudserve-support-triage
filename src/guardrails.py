@@ -13,8 +13,11 @@ only runs for drafts that already passed every free check:
     2 private_data  email address, API key/token, password, card number, phone number
     3 scope_tone    promises (refund, credit, "this will fix it", dates), unprofessional words,
                     talk about the system itself
-    4 citations     at least one citation, and only to articles the model was given
-    5 grounding     every sentence supported by the cited articles (PR-04, one model call)
+    4 citations     no citation of an article the model was not given
+    5 grounding     every sentence supported by the articles sent (PR-04, one model call); the
+                    fact-check also names the supporting article for each sentence
+    6 citation_coverage  code adds that article as [DOC-...] to any sentence the model left
+                    uncited; a claim that still has no citation blocks the draft (FR-06)
 
 If a check cannot run (model down, unreadable reply) the draft is blocked: when in doubt a
 person answers. Nothing here raises; the pipeline always gets a verdict.
@@ -37,10 +40,10 @@ from src.retrieve import RetrievedArticle
 
 logger = logging.getLogger(__name__)
 
-CHECKS = ("policy", "private_data", "scope_tone", "citations", "grounding")
+CHECKS = ("policy", "private_data", "scope_tone", "citations", "grounding", "citation_coverage")
 REQUIREMENTS = {"policy": ["FR-04", "FR-09"], "private_data": ["FR-09", "NFR-04"],
                 "scope_tone": ["FR-05", "FR-09"], "citations": ["FR-06", "NFR-03"],
-                "grounding": ["FR-06", "FR-09", "NFR-03"]}
+                "grounding": ["FR-06", "FR-09", "NFR-03"], "citation_coverage": ["FR-06", "NFR-03"]}
 
 # --- 2. private data ---------------------------------------------------------------------------
 _PRIVATE = [
@@ -112,6 +115,17 @@ def split_sentences(text: str) -> List[str]:
     return [s.strip() for s in _SENT.split(text) if s.strip()] if text else []
 
 
+def strip_citations(sentence: str) -> str:
+    return re.sub(r"\s+([.!?])", r"\1", _CITE.sub("", sentence)).strip()
+
+
+def add_citation(sentence: str, doc_id: str) -> str:
+    """'Do X.' -> 'Do X [DOC-A].' (citation before the final punctuation, as PR-02 writes them)."""
+    m = re.match(r"^(.*?)([.!?]+[\"')\]]*)?$", sentence.rstrip(), re.S)
+    body, end = m.group(1).rstrip(), m.group(2) or ""
+    return f"{body} [{doc_id}]{end}"
+
+
 class CheckResult(BaseModel):
     name: str
     passed: bool
@@ -128,6 +142,10 @@ class Verdict(BaseModel):
     prompt_version: Optional[str] = None
     tokens: int = 0
     cached: Optional[bool] = None
+    # the answer as it will be sent: every claim carries a citation (some added by code)
+    cited_answer: Optional[str] = None
+    cited_doc_ids: List[str] = Field(default_factory=list)
+    citations_added: int = 0
 
     @property
     def requirement_ids(self) -> List[str]:
@@ -189,17 +207,18 @@ class Guardrails:
         if foreign:
             return CheckResult(name="citations", passed=False, details={"not_given": foreign},
                                reason=f"The draft cites articles it was not given ({', '.join(foreign)}).")
-        if not in_text and not draft.cited_doc_ids:
-            return CheckResult(name="citations", passed=False, reason="The draft cites no help article.")
+        if not sent:
+            return CheckResult(name="citations", passed=False, reason="No help article was given to cite.")
         return CheckResult(name="citations", passed=True,
                            details={"cited": sorted(in_text | set(draft.cited_doc_ids))})
 
     def _grounding(self, draft: Draft, articles: List[RetrievedArticle]) -> Tuple[CheckResult, Dict[str, Any]]:
-        meta: Dict[str, Any] = {"model": "", "prompt_version": None, "tokens": 0, "cached": None}
-        cited = set(_CITE.findall(draft.answer)) | set(draft.cited_doc_ids)
-        passages = [a for a in articles if a.doc_id in cited] or \
-                   [a for a in articles if a.doc_id in draft.passage_doc_ids]
-        sentences = split_sentences(_CITE.sub("", draft.answer).replace(" .", "."))
+        meta: Dict[str, Any] = {"model": "", "prompt_version": None, "tokens": 0, "cached": None,
+                                "originals": [], "sources": {}}
+        passages = [a for a in articles if a.doc_id in draft.passage_doc_ids] or articles[:1]
+        originals = split_sentences(draft.answer)
+        sentences = [strip_citations(x) for x in originals]
+        meta["originals"] = originals
         if not sentences:
             return CheckResult(name="grounding", passed=False, reason="The draft is empty."), meta
         template, version = load_prompt("PR-04")
@@ -236,6 +255,7 @@ class Guardrails:
         for i, s in enumerate(sentences, 1):
             r = verdicts.get(i)
             label = str(r.get("supported", "")).lower() if r else "missing"
+            meta["sources"][i] = (label, str((r or {}).get("doc_id", "") or "").strip())
             if label not in ok:
                 bad.append({"n": i, "sentence": s[:200], "supported": label,
                             "unsupported_part": str((r or {}).get("unsupported_part", ""))[:200]})
@@ -247,11 +267,48 @@ class Guardrails:
                                       f"articles (sentence {first['n']} {first['supported']}{part})."), meta
         return CheckResult(name="grounding", passed=True, details={"sentences": len(sentences)}), meta
 
+    @staticmethod
+    def _coverage(draft: Draft, meta: Dict[str, Any]) -> Tuple[CheckResult, Dict[str, Any]]:
+        """Give every claim a citation (FR-06). Keep the model's own; otherwise use the article the
+        fact-check named, or the only article sent. A claim left without one blocks the draft."""
+        sent = list(draft.passage_doc_ids)
+        out, added, missing, used = [], 0, [], []
+        for i, original in enumerate(meta.get("originals", []), 1):
+            label, doc = meta.get("sources", {}).get(i, ("missing", ""))
+            own = _CITE.findall(original)
+            if own:
+                out.append(original)
+                used += own
+                continue
+            if label == "no_claim":
+                out.append(original)
+                continue
+            doc = doc if doc in sent else (sent[0] if len(sent) == 1 else "")
+            if not doc:
+                missing.append(i)
+                out.append(original)
+                continue
+            out.append(add_citation(original, doc))
+            used.append(doc)
+            added += 1
+        cited_ids = list(dict.fromkeys(used))
+        extra = {"cited_answer": " ".join(out), "cited_doc_ids": cited_ids, "citations_added": added}
+        if missing:
+            return CheckResult(name="citation_coverage", passed=False, details={"uncited_sentences": missing},
+                               reason=f"Sentence {missing[0]} has no citation and the supporting article could "
+                                      "not be identified."), extra
+        if not cited_ids:
+            return CheckResult(name="citation_coverage", passed=False,
+                               reason="The draft makes no claim that can be cited."), extra
+        return CheckResult(name="citation_coverage", passed=True,
+                           details={"citations_added": added, "cited": cited_ids}), extra
+
     # -- run all ----------------------------------------------------------------------------------
     def check(self, ticket: Ticket, draft: Draft, articles: List[RetrievedArticle],
               cls: Optional[Classification]) -> Verdict:
         results: List[CheckResult] = []
         meta: Dict[str, Any] = {}
+        extra: Dict[str, Any] = {}
         try:
             for name in CHECKS:
                 if name == "policy":
@@ -262,8 +319,10 @@ class Guardrails:
                     r = self._scope(draft.answer)
                 elif name == "citations":
                     r = self._citations(draft)
-                else:
+                elif name == "grounding":
                     r, meta = self._grounding(draft, articles)
+                else:
+                    r, extra = self._coverage(draft, meta)
                 results.append(r)
                 if not r.passed:
                     break
@@ -274,6 +333,9 @@ class Guardrails:
         failed = next((r for r in results if not r.passed), None)
         return Verdict(passed=failed is None, failed_check=failed.name if failed else None,
                        reason=failed.reason if failed else "All checks passed: no private data, no commitments, "
-                       "cited articles only, every sentence supported.",
+                       "every sentence supported by and cited to a help article.",
                        checks=results, model=meta.get("model", ""), prompt_version=meta.get("prompt_version"),
-                       tokens=meta.get("tokens", 0), cached=meta.get("cached"))
+                       tokens=meta.get("tokens", 0), cached=meta.get("cached"),
+                       cited_answer=extra.get("cited_answer") if failed is None else None,
+                       cited_doc_ids=extra.get("cited_doc_ids", []),
+                       citations_added=extra.get("citations_added", 0))

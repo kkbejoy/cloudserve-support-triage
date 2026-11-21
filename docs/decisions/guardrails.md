@@ -18,10 +18,19 @@ the ticket goes to a person with the draft attached to the hand-off note.
 | 1 | policy | settings | kill switch off; intent confidence below the routing threshold (repeated here as a second line of defence) |
 | 2 | private_data | patterns in code | email address, API key/token, "password is …", phone number, card number (Luhn-checked) |
 | 3 | scope_tone | patterns in code | refunds/credits, guarantees and promises, "this will/should fix it", dates, waived charges, unprofessional wording, talk about the system itself |
-| 4 | citations | code | no citation; citation of an article the model was not given |
-| 5 | grounding | PR-04 v1.1, one model call per draft | any sentence the fact-checker marks "no", "partial" or skips |
+| 4 | citations | code | citation of an article the model was not given |
+| 5 | grounding | PR-04 v1.2, one model call per draft | any sentence the fact-checker marks "no", "partial" or skips |
+| 6 | citation_coverage | code | a claim that has no citation and whose supporting article cannot be identified |
 
 Only check 5 costs tokens, and it runs only for drafts that passed 1–4.
+
+**Citations are attached by code (FR-06).** The first run with guardrails (22 Nov, 20 tickets) sent
+answers where several sentences had no citation (three answers had none inline). The model forgets
+them; the fact-check has just matched each sentence to a passage. So PR-04 v1.2 also returns the
+supporting article per sentence, and code adds `[DOC-…]` to any sentence the model left uncited (one
+article sent = that article). The model's own citations are kept; greetings need none. A claim that
+still cannot be cited blocks the draft. Blocking uncited answers instead would have cut automatic
+answers on that sample from 14 to about 9.
 
 ## Choices and trade-offs
 

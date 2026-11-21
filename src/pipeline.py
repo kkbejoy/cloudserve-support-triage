@@ -125,6 +125,10 @@ class Pipeline:
         v = self.guardrails.check(t, o.draft, arts, c)
         o.validation = v
         if v.passed:
+            if v.cited_answer:   # the answer as sent, with a citation on every claim (FR-06)
+                o.draft = o.draft.model_copy(update={"answer": v.cited_answer,
+                                                     "cited_doc_ids": v.cited_doc_ids or o.draft.cited_doc_ids})
+                o.reply = self.generator.compose_reply(o.draft, arts) if self.generator else o.reply
             o.final_action, o.final_rule = "auto_respond", "guardrails_passed"
             o.final_reason = (f"Answered automatically from {', '.join(o.draft.cited_doc_ids) or 'the cited article'}: "
                               "all guardrail checks passed.")

@@ -67,7 +67,7 @@ def _row(t, outcome: TicketOutcome, labels: Dict[str, Any], history: Dict[str, A
         "validation_ran": v is not None, "validation_passed": v.passed if v else None,
         "guardrails_fired": [v.failed_check] if v and v.failed_check else [],
         "guardrail_reason": v.reason if v and not v.passed else None,
-        "grounding_tokens": v.tokens if v else 0,
+        "grounding_tokens": v.tokens if v else 0, "citations_added": v.citations_added if v else 0,
         "provider_unavailable": outcome.final_rule == "provider_unavailable" or grounding_error,
         "latency_ms": round(latency_ms, 1), "error": outcome.error,
         "draft_error": d.error if d else None,

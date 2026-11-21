@@ -17,7 +17,8 @@ tests and the harness, and record the change and its measured effect in the Prom
 | PR-02 | build/PR02_answer_with_citations_v1.1.txt | `src/generate.py` - answer drafting (FR-06, FR-07) | in use |
 | PR-02 | build/PR02_answer_with_citations_v1.0.txt | first version; never refused (0 of 374 drafts, development set) | superseded |
 | PR-03 | build/PR03_escalation_summary_v1.0.txt | `src/generate.py` - escalation note when `ESCALATION_NOTE_LLM=true` (FR-08) | optional |
-| PR-04 | build/PR04_claim_support_check_v1.1.txt | `src/guardrails.py` - fact-check of every sentence of a draft, one call (FR-09) | in use |
+| PR-04 | build/PR04_claim_support_check_v1.2.txt | `src/guardrails.py` - fact-check of every sentence of a draft, one call, names the supporting article so code can cite it (FR-06, FR-09) | in use |
+| PR-04 | build/PR04_claim_support_check_v1.1.txt | one-call fact-check without the supporting article | superseded |
 | PR-04 | build/PR04_claim_support_check_v1.0.txt | one sentence x one passage per call; too many calls for the free tier | superseded |
 | PR-05 | evaluation/PR05_answer_quality_eval_v1.0.txt | answer-quality evaluation | planned |
 | PR-06 | dev/PR06_code_review_v1.0.txt | development (code review) | dev aid |
