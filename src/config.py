@@ -48,6 +48,26 @@ class Settings:
     # docs/decisions/classifier.md.
     classifier_path: str = os.getenv("CLASSIFIER_PATH", "./storage/classifier.joblib")
     classifier_floor: float = _float("CLASSIFIER_FLOOR", 0.30)
+    # routing (B-07): below this intent confidence the ticket escalates. Chosen from
+    # out-of-fold predictions - see docs/decisions/routing.md.
+    confidence_threshold: float = _float("CONFIDENCE_THRESHOLD", 0.80)
+    # kill switch: false = every ticket escalates, no automatic answers (Governance section 5)
+    auto_respond_enabled: bool = os.getenv("AUTO_RESPOND_ENABLED", "true").strip().lower() not in (
+        "false", "0", "no", "off")
+    # intents that always go to a person (FR-05), whatever the confidence
+    must_escalate_intents: str = os.getenv(
+        "MUST_ESCALATE_INTENTS",
+        "security_incident,compliance_request,feature_request,unclear_request")
+    # decision log (B-10); sqlite:///<path>
+    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./storage/decisions.db")
+
+    @property
+    def must_escalate(self) -> frozenset:
+        return frozenset(i.strip() for i in self.must_escalate_intents.split(",") if i.strip())
+
+    @property
+    def database_path(self) -> str:
+        return self.database_url.replace("sqlite:///", "", 1)
 
 
 def get_settings() -> Settings:
