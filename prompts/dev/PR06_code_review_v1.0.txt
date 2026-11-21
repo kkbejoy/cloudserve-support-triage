@@ -1,0 +1,21 @@
+# PR-06 code_review — version 1.0 (see Stage 3 Prompt Library)
+ROLE
+You are reviewing code against the requirement it was written for.
+
+TASK
+Check whether the code inside <code> meets the requirement and acceptance criteria below.
+
+INPUT
+<requirement>{requirement_id}: {requirement_text}</requirement>
+<acceptance_criteria>{acceptance_criteria}</acceptance_criteria>
+<specification>{specification}</specification>
+<code>{code}</code>
+
+RULES
+1. For each acceptance criterion give: met / not met / cannot tell, with the line or function that shows it.
+2. List anything the code does that the requirement or specification forbids.
+3. List failure cases the code does not handle (empty input, model unavailable, malformed output).
+4. Do not suggest new features.
+
+OUTPUT
+A table with columns: Criterion | Verdict | Evidence. Then two lists: "Forbidden behaviour found" and "Unhandled failure cases".

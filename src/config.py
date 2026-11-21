@@ -60,6 +60,27 @@ class Settings:
         "security_incident,compliance_request,feature_request,unclear_request")
     # decision log (B-10); sqlite:///<path>
     database_url: str = os.getenv("DATABASE_URL", "sqlite:///./storage/decisions.db")
+    # language model for answer drafting (B-08). Provider: groq | openrouter | auto
+    # (auto = Groq if GROQ_API_KEY is set, otherwise OpenRouter).
+    llm_provider: str = os.getenv("LLM_PROVIDER", "auto").strip().lower()
+    model_name: str = os.getenv("MODEL_NAME", "")
+    llm_timeout_s: float = _float("LLM_TIMEOUT_S", 30.0)
+    llm_max_retries: int = _int("LLM_MAX_RETRIES", 3)
+    # minimum seconds between calls (free tiers limit requests per minute); empty = provider default
+    llm_min_interval_s: str = os.getenv("LLM_MIN_INTERVAL_S", "")
+    # after this many consecutive failed calls the provider is treated as down for the run (A11)
+    llm_circuit_breaker: int = _int("LLM_CIRCUIT_BREAKER", 3)
+    llm_cache_path: str = os.getenv("LLM_CACHE_PATH", "./storage/llm_cache.sqlite")
+    # answer drafting (B-08): prompt version ("" = newest file in prompts/), and how much text
+    # is sent: at most this many articles, and a 2nd/3rd article only if its score is within
+    # the margin of the best one (fewer tokens; the best article answers most tickets)
+    prompt_pr02_version: str = os.getenv("PROMPT_PR02_VERSION", "").strip()
+    generation_max_articles: int = _int("GENERATION_MAX_ARTICLES", 2)
+    generation_score_margin: float = _float("GENERATION_SCORE_MARGIN", 0.10)
+    generation_max_tokens: int = _int("GENERATION_MAX_TOKENS", 400)
+    # use the LLM (PR-03) for escalation notes; false = deterministic template (no API calls)
+    escalation_note_llm: bool = os.getenv("ESCALATION_NOTE_LLM", "false").strip().lower() in (
+        "true", "1", "yes", "on")
 
     @property
     def must_escalate(self) -> frozenset:

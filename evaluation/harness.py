@@ -2,8 +2,9 @@
 
     python -m evaluation.harness --input data/validation_tickets.json --output evaluation/results/
 
-For every ticket in --input: ingest -> classify -> retrieve -> route (-> generate -> validate once
-built), every decision written to the decision log. No ticket is skipped: a ticket that fails is
+For every ticket in --input: ingest -> classify -> retrieve -> route -> generate (-> validate once
+built), every decision written to the decision log. Use --no-generate for a routing-only run that
+makes no LLM calls. No ticket is skipped: a ticket that fails is
 escalated and logged. At the end it writes, in a new folder <output>/run_<run_id>/:
   responses.jsonl  one line per ticket (action, rule, reason, intent, sources, latency)
   metrics.json     volume, business, technical and governance figures, by channel and group
@@ -25,33 +26,43 @@ from typing import Any, Dict, Optional
 
 from evaluation.metrics import compute, to_markdown
 from src.classify import Classifier
+from src.generate import Generator
 from src.ingest import load_tickets
+from src.llm import LLMUnavailable
 from src.logging_store import DecisionLog
 from src.pipeline import Pipeline, TicketOutcome
 from src.retrieve import Retriever
 from src.route import Router
 
 logger = logging.getLogger("harness")
-STAGES_BUILT = ["ingest", "classify", "retrieve", "route", "log"]
+STAGES_BUILT = ["ingest", "classify", "retrieve", "route", "generate", "log"]
 
 
 def _row(t, outcome: TicketOutcome, labels: Dict[str, Any], history: Dict[str, Any],
          latency_ms: float) -> Dict[str, Any]:
-    c, r = outcome.classification, outcome.retrieval
+    c, r, d = outcome.classification, outcome.retrieval, outcome.draft
     expected = labels.get("expected_doc_ids") or []
     returned = r.doc_ids if r else []
     return {
         "ticket_id": t.ticket_id, "channel": t.channel, "customer_tier": t.customer_tier,
         "customer_region": t.customer_region, "language_fluency": t.language_fluency,
         "received_at": t.received_at, "processed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "final_action": outcome.final_action, "rule": outcome.routing.rule, "reason": outcome.routing.reason,
+        "final_action": outcome.final_action, "rule": outcome.final_rule or outcome.routing.rule,
+        "reason": outcome.final_reason or outcome.routing.reason, "routing_rule": outcome.routing.rule,
         "intent": c.intent if c else None, "intent_confidence": c.intent_confidence if c else None,
         "urgency": c.urgency if c else None, "urgency_confidence": c.urgency_confidence if c else None,
         "retrieval_ran": r is not None,
         "sources": [{"doc_id": a.doc_id, "score": a.score, "section": a.matched_section}
                     for a in (r.articles if r else [])],
         "retrieval_hit": bool(set(expected) & set(returned)) if expected else None,
-        "answer": None, "guardrails_fired": [], "latency_ms": round(latency_ms, 1), "error": outcome.error,
+        "generation_ran": d is not None,
+        "answerable_by_model": (d.answerable if d and not d.error else None),
+        "cited_doc_ids": d.cited_doc_ids if d else [], "model_uncertainty": d.uncertainty if d else None,
+        "llm_cached": d.cached if d else None, "passage_doc_ids": d.passage_doc_ids if d else [],
+        "llm_tokens": d.tokens if d else 0, "prompt_version": d.prompt_version if d else None,
+        "answer": outcome.reply, "acknowledgement": outcome.acknowledgement,
+        "escalation_note": outcome.escalation_note.model_dump() if outcome.escalation_note else None,
+        "guardrails_fired": [], "latency_ms": round(latency_ms, 1), "error": outcome.error or (d.error if d else None),
         # labels and history are used only for scoring, never by the pipeline
         "true_intent": labels.get("intent"), "true_urgency": labels.get("urgency"),
         "expected_route": labels.get("expected_route"), "expected_doc_ids": expected,
@@ -62,9 +73,48 @@ def _row(t, outcome: TicketOutcome, labels: Dict[str, Any], history: Dict[str, A
     }
 
 
+def _llm_name(generator: Optional[Generator]) -> str:
+    if generator is None:
+        return "off"
+    llm = generator._llm
+    if llm is None:                       # build the default client now so the name is recorded
+        try:
+            llm = generator.llm
+        except Exception as exc:          # bad provider name: every draft will escalate
+            return f"unavailable ({exc})"
+    return getattr(llm, "name", type(llm).__name__)
+
+
+def _preflight(generator: Optional[Generator]) -> None:
+    """Stop before processing if the model setup is wrong (bad key, model name not offered by the
+    provider). A temporary outage (timeout, 5xx) does not stop the run: those tickets escalate."""
+    if generator is None:
+        return
+    llm = generator.llm
+    check = getattr(llm, "check", None)
+    if check is None:
+        return
+    try:
+        check()
+    except LLMUnavailable as exc:
+        msg = str(exc)
+        if msg.startswith(("HTTP 400", "HTTP 401", "HTTP 402", "HTTP 403", "HTTP 404", "No API key")):
+            raise RuntimeError(
+                f"LLM setup problem for {getattr(llm, 'name', 'the model')}: {msg[:200]}\n"
+                "Fix LLM_PROVIDER / MODEL_NAME / the API key in .env, or run with --no-generate.") from exc
+        logger.warning("LLM check failed (%s); continuing - affected tickets will be escalated", msg[:120])
+
+
+def _llm_usage(generator: Optional[Generator]) -> Dict[str, Any]:
+    llm = generator._llm if generator else None
+    keys = ("calls", "cache_hits", "failures", "tokens_in", "tokens_out")
+    return {k: getattr(llm, k, None) for k in keys} if llm else {}
+
+
 def run(input_path: str, output_dir: str, classifier: Optional[Classifier] = None,
         retriever: Optional[Retriever] = None, router: Optional[Router] = None,
-        log: Optional[DecisionLog] = None, limit: Optional[int] = None) -> Dict[str, Any]:
+        log: Optional[DecisionLog] = None, limit: Optional[int] = None,
+        generator: Optional[Generator] = None, generate: bool = True) -> Dict[str, Any]:
     start = time.perf_counter()
     ingest = load_tickets(input_path)
     tickets = ingest.tickets[:limit] if limit else ingest.tickets
@@ -72,12 +122,18 @@ def run(input_path: str, output_dir: str, classifier: Optional[Classifier] = Non
     retriever = retriever or Retriever()
     router = router or Router()
     log = log or DecisionLog()
+    if generate and generator is None:
+        generator = Generator()
+    if not generate:
+        generator = None
+    _preflight(generator)
     config = {"confidence_threshold": router.threshold, "relevance_threshold": retriever.threshold,
               "classifier_floor": classifier.floor, "classifier_version": classifier.version,
               "chunk_strategy": retriever.strategy, "auto_respond_enabled": router.enabled,
-              "must_escalate_intents": sorted(router.must_escalate)}
+              "must_escalate_intents": sorted(router.must_escalate),
+              "generation": _llm_name(generator)}
     run_id = log.start_run(str(input_path), len(tickets), config)
-    pipeline = Pipeline(classifier, retriever, router, log)
+    pipeline = Pipeline(classifier, retriever, router, log, generator)
 
     out = Path(output_dir) / f"run_{run_id}"
     out.mkdir(parents=True, exist_ok=True)
@@ -97,7 +153,10 @@ def run(input_path: str, output_dir: str, classifier: Optional[Classifier] = Non
     reconciliation = log.reconcile(run_id, [t.ticket_id for t in tickets])
     run_info = {"run_id": run_id, "input_file": str(input_path), "output_dir": str(out),
                 "duration_s": round(time.perf_counter() - start, 1), "stages_built": STAGES_BUILT,
-                "problems_in_input": [p.model_dump() for p in ingest.problems], "config": config}
+                "problems_in_input": [p.model_dump() for p in ingest.problems], "config": config,
+                "llm_usage": _llm_usage(generator)}
+    if generator is None:
+        run_info["stages_built"] = [s for s in STAGES_BUILT if s != "generate"]
     metrics = compute(rows, reconciliation, run_info)
     (out / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str), encoding="utf-8")
     (out / "metrics.md").write_text(to_markdown(metrics), encoding="utf-8")
@@ -109,19 +168,27 @@ def main(argv=None) -> int:
     p.add_argument("--input", required=True, help="ticket JSON file (development, validation or hidden set)")
     p.add_argument("--output", required=True, help="folder for results; a run_<id> subfolder is created")
     p.add_argument("--limit", type=int, help="process only the first N tickets (for a quick check)")
+    p.add_argument("--no-generate", action="store_true", help="stop after routing; no LLM calls")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("src.ingest").setLevel(logging.WARNING)
     try:
-        m = run(args.input, args.output, limit=args.limit)
+        m = run(args.input, args.output, limit=args.limit, generate=not args.no_generate)
     except (ValueError, RuntimeError, FileNotFoundError) as exc:   # setup problems: say what to do
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     v, b, t, g = m["volume"], m["business"], m["technical"], m["governance"]
     pct = lambda x: "-" if x is None else f"{100 * x:.1f}%"  # noqa: E731
     print(f"\nRun {m['run']['run_id']}: {v['tickets_processed']} tickets in {m['run']['duration_s']} s")
-    print(f"  answered {v['answered_automatically']} | pending answer step {v['pending_answer_step']} | "
-          f"escalated {v['escalated']} | blocked {v['blocked_by_guardrails']} | errors {v['processing_errors']}")
+    print(f"  answered {v['answered_automatically']} | drafted (awaiting guardrails) "
+          f"{v['drafted_awaiting_validation']} | pending answer step {v['pending_answer_step']} | "
+          f"escalated {v['escalated']} (not answerable {v['escalated_not_answerable']}) | "
+          f"blocked {v['blocked_by_guardrails']} | errors {v['processing_errors']}")
+    gen = t.get("generation") or {}
+    if gen.get("ran"):
+        print(f"  generation: {m['run']['config']['generation']} | LLM {m['run']['llm_usage']} | "
+              f"gap caught {gen.get('unanswerable_caught')}/{gen.get('unanswerable_cleared')} | "
+              f"answerable wrongly refused {gen.get('answerable_refused')}/{gen.get('answerable_cleared')}")
     base = b["baseline_from_history"]["first_contact_resolution"]
     print(f"  FCR {pct(b['first_contact_resolution'])} (baseline {pct(base)}) | "
           f"escalation {pct(b['escalation_rate'])} | cleared {pct(b['cleared_for_answer_rate'])}")

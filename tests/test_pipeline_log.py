@@ -86,3 +86,31 @@ def test_T10c_processing_error_is_escalated_and_logged(pipeline):
     assert all(o.routing.rule == "processing_error" for o in outcomes)
     rows = [r for r in pipe.log.decisions(run) if r["stage"] == "routing"]
     assert len(rows) == 3 and all("vector store unavailable" in r["error"] for r in rows)
+
+
+def test_T10d_generation_stage_logged_and_outcomes(pipeline):
+    """B-08: cleared tickets go to drafting; refusals and provider errors escalate with a note."""
+    from src.generate import Generator
+    from src.llm import LLMUnavailable
+    from tests.test_generate import ANSWER, REFUSE, FakeLLM
+
+    pipe, d = pipeline
+    ingest = load_tickets(d / "t.json")
+    for llm, final, rule in ((FakeLLM(ANSWER), "drafted", "answer_drafted"),
+                             (FakeLLM(REFUSE), "escalate", "not_answerable"),
+                             (FakeLLM(LLMUnavailable("down")), "escalate", "provider_unavailable")):
+        p = Pipeline(pipe.classifier, pipe.retriever, pipe.router, pipe.log, Generator(llm=llm))
+        run = pipe.log.start_run("t.json", len(ingest.tickets), {})
+        outcomes = p.process(run, ingest.tickets)
+        assert pipe.log.reconcile(run, [t.ticket_id for t in ingest.tickets])["reconciled"]
+        sent = [o for o in outcomes if o.draft is not None]
+        assert sent, "no ticket was cleared by routing - fixture too strict"
+        assert all(o.final_action == final and o.final_rule == rule for o in sent)
+        gen_rows = [r for r in pipe.log.decisions(run) if r["stage"] == "generation"]
+        assert len(gen_rows) == len(sent) and all(r["prompt_version"].startswith("PR-02 v") for r in gen_rows)
+        for o in outcomes:
+            assert o.final_action in ("drafted", "escalate")      # never auto_respond before B-09
+            if o.final_action == "escalate":
+                assert o.acknowledgement and o.escalation_note and o.reply is None
+            else:
+                assert o.reply and "prepared automatically" in o.reply
