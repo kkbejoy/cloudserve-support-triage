@@ -43,6 +43,11 @@ class Settings:
     # cosine similarity cut-off; below it retrieval returns nothing.
     # Placeholder until set from scripts/compare_chunking.py (B-04).
     relevance_threshold: float = _float("RELEVANCE_THRESHOLD", 0.35)
+    # trained classifier (scripts/train_classifier.py) and its low-confidence floor:
+    # below it the intent becomes 'unclear_request' (escalated). Starting value; see
+    # docs/decisions/classifier.md.
+    classifier_path: str = os.getenv("CLASSIFIER_PATH", "./storage/classifier.joblib")
+    classifier_floor: float = _float("CLASSIFIER_FLOOR", 0.30)
 
 
 def get_settings() -> Settings:
