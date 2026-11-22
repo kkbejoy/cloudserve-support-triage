@@ -62,7 +62,8 @@ def open_collection(client, strategy: str, embedder: Embedder):
     except Exception as exc:
         raise RuntimeError(
             f"Vector index '{collection_name(strategy)}' not found. "
-            f"Run: python -m scripts.build_index --strategy {strategy}") from exc
+            "Run: python -m scripts.setup   (builds it; or python -m scripts.build_index "
+            f"--strategy {strategy})") from exc
 
 
 def query(collection, query_embedding: List[float], n_results: int) -> List[Dict[str, Any]]:
