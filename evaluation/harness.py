@@ -197,7 +197,9 @@ def main(argv=None) -> int:
     p.add_argument("--no-guardrails", action="store_true",
                    help="draft answers but do not check or send them (for prompt work only)")
     args = p.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    import os
+    logging.basicConfig(level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+                        format="%(levelname)s %(name)s: %(message)s")
     logging.getLogger("src.ingest").setLevel(logging.WARNING)
     try:
         m = run(args.input, args.output, limit=args.limit, generate=not args.no_generate,
