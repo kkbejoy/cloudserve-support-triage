@@ -1,5 +1,7 @@
 # CloudServe support triage
 
+[![CI](https://github.com/kkbejoy/cloudserve-support-triage/actions/workflows/ci.yml/badge.svg)](https://github.com/kkbejoy/cloudserve-support-triage/actions/workflows/ci.yml)
+
 An intelligent support triage system for CloudServe's support queue. Every ticket, from any of the
 four channels, is classified, matched against the 29 help-centre articles, and either **answered
 automatically with citations** or **escalated to a person** with a hand-off note. An answer is sent
@@ -155,7 +157,11 @@ Any SQLite viewer works too, for example DB Browser for SQLite.
 python -m pytest
 ```
 88 tests, about 1 minute, no API key or network needed: a fake model and a fake embedder stand in.
-Coverage report: `python -m pytest --cov` (89% of the system code).
+Coverage report: `python -m pytest --cov` (89% of the system code). Style check: `flake8`.
+
+Every push runs the same checks on GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+lint and tests, then a smoke run of steps 3, 4 and 8 on a clean machine (setup from
+`.env.example`, then the unattended run with `--no-generate`, so no API key is needed).
 
 ---
 
