@@ -8,6 +8,11 @@ only if it passes every guardrail. Every decision is written to a permanent log.
 Built for the Forward Deployed Engineering capstone (CloudServe brief). Python 3.11, runs locally,
 free-tier model provider (Groq).
 
+**Contents:** [Quick start](#quick-start) · [Results](#results-validation-set) ·
+[How it works](#how-it-works) · [Configuration](#configuration) ·
+[Repository layout](#repository-layout) · [Troubleshooting](#troubleshooting) ·
+[Known limitations](#known-limitations)
+
 ---
 
 ## Quick start
@@ -111,6 +116,10 @@ and the fact-check wait for the provider's per-minute limits. The run never stop
 provider fails, affected tickets are escalated and the summary says **degraded run**. A wrong key or
 model name stops it at the start with a clear message (exit code 2).
 
+Without an API key the run stops at the start with a message saying which key to set (exit code 2).
+To try the pipeline without one, add `--no-generate`: tickets are classified, retrieved and routed,
+but nothing is drafted or sent.
+
 The run writes a folder `evaluation/results/run_<run id>/` with:
 
 | File | What it is |
@@ -131,8 +140,9 @@ check it yourself, count decisions per run:
 ```
 python -c "import sqlite3; c=sqlite3.connect('storage/decisions.db'); print(c.execute('select run_id, count(distinct ticket_id), count(*) from decisions group by run_id order by run_id desc limit 3').fetchall())"
 ```
-The newest run id matches the folder name, and its distinct ticket count equals *tickets processed*
-in `metrics.md`. Each ticket has one record per stage it went through (`classification`, `routing`,
+The harness run's id matches its folder name (`run_<run id>`), and its distinct ticket count equals
+*tickets processed* in `metrics.md`. The API server also writes a run of its own (the tickets
+submitted in steps 6 and 7), so it appears in the list too. Each ticket has one record per stage it went through (`classification`, `routing`,
 then `generation` and `validation` when an answer was drafted), with the action, the rule, a
 plain-English reason, the sources and the guardrail results. Customer text is not stored in the
 log, only its channel, length and a fingerprint.
@@ -148,6 +158,28 @@ python -m pytest
 Coverage report: `python -m pytest --cov` (89% of the system code).
 
 ---
+
+## Results (validation set)
+
+Full run on the 80 validation tickets, 22 Nov 2026 (Groq free tier: `openai/gpt-oss-20b` drafting,
+`openai/gpt-oss-120b` fact-check).
+
+| Measure | Result |
+|---|---|
+| First-contact resolution (answered automatically, every check passed) | **72.5%** (historical baseline for the same tickets: 46.2%) |
+| Tickets that must never be auto-answered, answered | **0** |
+| Sent answers with a citation on every sentence | **58 of 58** |
+| Citations pointing at the expected article | **97.7%** (43 of 44 with an expected article) |
+| Retrieval finds the expected article | 96.2% |
+| Drafts blocked by the fact-check | 5 (each added a claim the article does not make) |
+| Decision log reconciled with tickets processed | 80 of 80 |
+| Latency per ticket, median / 95th percentile | 4.1 s / 10.4 s (two model calls plus free-tier rate limits) |
+
+Read with care: 57 of the 80 validation tickets repeat a development ticket's text, so the
+classifier's validation precision (100%) is optimistic; the cross-validated figure on development
+data (grouped 5-fold, identical texts kept together) is 98.7% macro precision. 15 of the 58 sent
+answers are labelled "escalate" in the data; 10 of those have an identical development ticket
+labelled "answer". Fairness by customer group: [`docs/fairness_audit.md`](docs/fairness_audit.md).
 
 ## How it works
 

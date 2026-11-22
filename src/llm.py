@@ -141,7 +141,8 @@ class OpenAICompatibleLLM:
                 self.cache_hits += 1
                 return LLMReply(text=hit, model=self.name, cached=True)
         if not self._key:
-            raise LLMUnavailable(f"No API key set for {self.provider} ({PROVIDERS[self.provider]['key']})")
+            raise LLMUnavailable(f"No API key set for {self.provider} ({PROVIDERS[self.provider]['key']}). "
+                                 "Put your key in .env: GROQ_API_KEY (recommended) or OPENROUTER_API_KEY")
         if self._consecutive_failures >= self.breaker_limit:
             raise LLMUnavailable(f"{self.provider} treated as unavailable after "
                                  f"{self._consecutive_failures} consecutive failures")

@@ -1,10 +1,10 @@
 # Decision: routing rules, confidence threshold and decision log (B-07, B-10)
 
-Status: **proposed** - confirm after running `python -m scripts.choose_threshold` and `scripts.route_sample`
+Status: **decided** - 21 Nov 2026 (threshold measured with `python -m scripts.choose_threshold`)
 Serves: FR-04, FR-05, FR-10, acceptance criteria A5, A7 (kill switch), A8; Project Brief section 05;
 Governance Framework sections 1 (minimum record), 4 (confidence floor) and 5 (kill switch).
-Evidence: `evaluation/results/threshold_choice_<stamp>.md`, from the classifier's out-of-fold
-predictions `classifier_oof_20261120_1746.csv` (500 development tickets).
+Evidence: `evaluation/results/threshold_choice_20261121_0934.md`, from the classifier's out-of-fold
+predictions `evaluation/results/classifier_oof_20261120_1746.csv` (500 development tickets).
 
 ## Routing rules (src/route.py), first match decides
 | # | Rule | Action | Requirement |
@@ -44,11 +44,17 @@ Above 0.85, each wrong intent removed costs 3-6 points of coverage.
 The labels say 37.8% of tickets should escalate; classifier + rules catch about 19%. The other
 **about 99 tickets (20%) have ordinary intents but no answer in the documentation**
 (e.g. database, performance, deployment questions). Neither the classifier, the relevance threshold
-(retrieval.md: answerable vs unanswerable similarity 0.609 vs 0.598) nor a text model trained to
+(chunking.md: answerable vs unanswerable similarity 0.609 vs 0.598) nor a text model trained to
 predict answerability (73% vs a 71% baseline) can identify them.
 Consequence: these must be caught at the answer step - PR-02 returning `answerable: false` - and by
 the grounding guardrail (B-08, B-09). Routing is necessary but not sufficient; record in the PRD
 revision log (Stage 5).
+
+**Outcome (22 Nov, validation run):** the model almost never declines (1 of 63 drafts), so PR-02's
+answerability flag does not close this gap. The fact-check blocks drafts that add unsupported claims
+(guardrails.md). Most of the remaining "sent but labelled escalate" tickets have an identical-text
+twin labelled "answer", and text patterns match the escalate label only at its base rate: the labels
+behave like noise for these tickets, which caps agreement for any text-only system.
 
 ## Decision log (src/logging_store.py)
 - SQLite (`DATABASE_URL`), one row per decision per stage, fields as the Governance Framework's
