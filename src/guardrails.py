@@ -9,6 +9,8 @@ NFR-03, NFR-04, NFR-10; Governance Framework section 4).
 Checks run cheapest first and stop at the first failure, so the paid model call (grounding)
 only runs for drafts that already passed every free check:
 
+    0 instruction_integrity  (on the TICKET, before drafting: check_input) text that tries to
+                    change the system's instructions -> block, escalate, record the input for review
     1 policy        kill switch off, or intent confidence below the threshold
     2 private_data  email address, API key/token, password, card number, phone number
     3 scope_tone    promises (refund, credit, "this will fix it", dates), unprofessional words,
@@ -24,8 +26,11 @@ person answers. Nothing here raises; the pipeline always gets a verdict.
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
@@ -34,6 +39,7 @@ from src.classify import Classification
 from src.config import Settings, get_settings
 from src.generate import Draft, _compact, _parse
 from src.llm import LLM, LLMUnavailable, OpenAICompatibleLLM, get_llm
+from src import privacy
 from src.models import Ticket
 from src.prompts import fill, load_prompt, neutralise_tags
 from src.retrieve import RetrievedArticle
@@ -41,46 +47,13 @@ from src.retrieve import RetrievedArticle
 logger = logging.getLogger(__name__)
 
 CHECKS = ("policy", "private_data", "scope_tone", "citations", "grounding", "citation_coverage")
-REQUIREMENTS = {"policy": ["FR-04", "FR-09"], "private_data": ["FR-09", "NFR-04"],
+REQUIREMENTS = {"instruction_integrity": ["FR-09", "NFR-10"], "policy": ["FR-04", "FR-09"],
+                "private_data": ["FR-09", "NFR-04"],
                 "scope_tone": ["FR-05", "FR-09"], "citations": ["FR-06", "NFR-03"],
                 "grounding": ["FR-06", "FR-09", "NFR-03"], "citation_coverage": ["FR-06", "NFR-03"]}
 
-# --- 2. private data ---------------------------------------------------------------------------
-_PRIVATE = [
-    ("email address", re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")),
-    ("API key or token", re.compile(r"\b(?:sk|pk|rk|key|tok|api|ghp|xox[abp])[-_](?=[A-Za-z0-9_\-]*\d)"
-                                    r"[A-Za-z0-9_\-]{12,}\b", re.I)),
-    ("API key or token", re.compile(r"\b(?=[A-Za-z0-9_\-]*\d)(?=[A-Za-z0-9_\-]*[A-Za-z])[A-Za-z0-9_\-]{32,}\b")),
-    ("password", re.compile(r"\b(?:password|passwd|pwd)\s*(?:is|:|=)\s*\S+", re.I)),
-]
-_PHONE = re.compile(r"(?<![\w-])\+?\d[\d \-()]{8,}\d(?![\w-])")
-_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-_CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-
-
-def _luhn(digits: str) -> bool:
-    total, alt = 0, False
-    for ch in reversed(digits):
-        d = int(ch)
-        if alt:
-            d = d * 2 - 9 if d > 4 else d * 2
-        total += d
-        alt = not alt
-    return total % 10 == 0
-
-
-def find_private_data(text: str) -> List[str]:
-    """Kinds of private data found in text (empty list = none)."""
-    found = [kind for kind, rx in _PRIVATE if rx.search(text)]
-    for m in _PHONE.finditer(text):
-        digits = re.sub(r"\D", "", m.group())
-        if len(digits) >= 9 and not _DATE.match(m.group().strip()):
-            found.append("phone number")
-    for m in _CARD.finditer(text):
-        digits = re.sub(r"\D", "", m.group())
-        if 13 <= len(digits) <= 19 and _luhn(digits):
-            found.append("card number")
-    return sorted(set(found))
+# --- 2. private data (patterns live in src/privacy.py, shared with the prompt redaction) -------
+find_private_data = privacy.find_private_data
 
 
 # --- 3. scope and tone -------------------------------------------------------------------------
@@ -171,7 +144,35 @@ class Guardrails:
                 self._llm = get_llm()
         return self._llm
 
-    # -- the five checks ------------------------------------------------------------------------
+    # -- 0. the ticket itself (runs before any drafting) ------------------------------------------
+    def check_input(self, ticket: Ticket) -> Optional[Verdict]:
+        """None if the ticket is clean; a failed Verdict if it tries to change the system's
+        instructions (Governance Framework: block, escalate, record the input for review)."""
+        hits = privacy.find_injection(f"{ticket.subject}\n{ticket.body}")
+        if not hits:
+            return None
+        r = CheckResult(name="instruction_integrity", passed=False,
+                        details={"found": [{"kind": k, "words": w} for k, w in hits]},
+                        reason=f"The ticket tries to change the system's instructions ({hits[0][0]}: "
+                               f"\"{hits[0][1]}\"); not answered automatically, kept for review.")
+        return Verdict(passed=False, failed_check=r.name, reason=r.reason, checks=[r])
+
+    def record_for_review(self, run_id: str, ticket: Ticket, verdict: Verdict) -> None:
+        """Append the flagged ticket to the review queue (git-ignored, kept apart from the decision
+        log, which stores only a fingerprint of customer text). Never raises."""
+        try:
+            path = Path(self.s.review_queue_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            entry = {"recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "run_id": run_id,
+                     "ticket_id": ticket.ticket_id, "channel": ticket.channel, "check": verdict.failed_check,
+                     "found": verdict.checks[0].details.get("found") if verdict.checks else None,
+                     "subject": ticket.subject, "body": ticket.body}
+            with path.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        except Exception:  # recording must never stop the pipeline
+            logger.exception("could not write review queue entry for %s", ticket.ticket_id)
+
+    # -- the checks on a drafted answer ----------------------------------------------------------
     def _policy(self, cls: Optional[Classification]) -> CheckResult:
         if not self.enabled:
             return CheckResult(name="policy", passed=False,

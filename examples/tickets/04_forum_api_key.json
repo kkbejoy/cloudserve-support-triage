@@ -1,0 +1,9 @@
+{
+  "ticket_id": "EX-FORUM-1",
+  "channel": "forum",
+  "subject": "401 after rotating keys",
+  "body": "After rotating our API key the old one returns 401, which is expected, but the new one also returns 401 on some endpoints. What should I check?",
+  "customer_tier": "standard",
+  "customer_region": "latin_america",
+  "language_fluency": "fluent"
+}

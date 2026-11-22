@@ -85,6 +85,8 @@ class Settings:
     # true = a sentence the checker calls "partial" still passes (default: strict, it blocks)
     grounding_allow_partial: bool = os.getenv("GROUNDING_ALLOW_PARTIAL", "false").strip().lower() in (
         "true", "1", "yes", "on")
+    # tickets blocked by the instruction-integrity check are kept here for review (git-ignored)
+    review_queue_path: str = os.getenv("REVIEW_QUEUE_PATH", "./storage/review_queue.jsonl")
     # use the LLM (PR-03) for escalation notes; false = deterministic template (no API calls)
     escalation_note_llm: bool = os.getenv("ESCALATION_NOTE_LLM", "false").strip().lower() in (
         "true", "1", "yes", "on")
