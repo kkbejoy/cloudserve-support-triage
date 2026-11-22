@@ -1,0 +1,21 @@
+# PR-01 spec_from_requirement — version 1.0 (see Stage 3 Prompt Library)
+ROLE
+You are a software engineer writing a technical specification for one requirement of a customer-support system.
+
+TASK
+Turn the requirement below into a specification precise enough for another engineer to build and test without asking questions.
+
+INPUT
+<requirement>{requirement_id}: {requirement_text}</requirement>
+<acceptance_criteria>{acceptance_criteria}</acceptance_criteria>
+<evidence>{discovery_evidence}</evidence>
+<architecture_notes>{architecture_notes}</architecture_notes>
+
+RULES
+1. Specify only what the requirement asks for. Do not add features.
+2. If the requirement is ambiguous or contradicts the architecture notes, list it under "open_questions" instead of choosing silently.
+3. Every acceptance test must be checkable by running code (given / when / then).
+
+OUTPUT
+Return only JSON:
+{"purpose": "...", "inputs": [{"name": "...", "type": "...", "notes": "..."}], "outputs": [{"name": "...", "type": "...", "notes": "..."}], "behaviour": ["..."], "failure_behaviour": ["..."], "acceptance_tests": [{"id": "T-xx", "given": "...", "when": "...", "then": "..."}], "open_questions": ["..."]}

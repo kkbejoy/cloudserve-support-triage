@@ -1,0 +1,819 @@
+{
+  "meta": {
+    "run_at": "20261120_1746",
+    "tickets": "data/development_tickets.json",
+    "n_tickets": 500,
+    "unique_texts": 343,
+    "folds": 5,
+    "chosen": "knn_emb",
+    "embedding_model": "all-MiniLM-L6-v2",
+    "model_path": "./storage/classifier.joblib"
+  },
+  "results": {
+    "logreg_emb": {
+      "intent": {
+        "accuracy": 0.982,
+        "macro_precision": 0.986,
+        "macro_recall": 0.982,
+        "macro_f1": 0.983,
+        "top3_accuracy": 0.99,
+        "ece_raw": 0.134,
+        "temperature": 0.35,
+        "ece_calibrated": 0.011,
+        "reliability": [
+          {
+            "bin": "0.1-0.2",
+            "n": 2,
+            "mean_confidence": 0.178,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.2-0.3",
+            "n": 2,
+            "mean_confidence": 0.204,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 1,
+            "mean_confidence": 0.362,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 1,
+            "mean_confidence": 0.48,
+            "accuracy": 1.0
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 3,
+            "mean_confidence": 0.573,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 2,
+            "mean_confidence": 0.667,
+            "accuracy": 0.5
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 9,
+            "mean_confidence": 0.871,
+            "accuracy": 1.0
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 480,
+            "mean_confidence": 0.999,
+            "accuracy": 1.0
+          }
+        ],
+        "per_class": {
+          "account_access": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 22
+          },
+          "api_key_issue": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 18
+          },
+          "api_usage_question": {
+            "precision": 1.0,
+            "recall": 0.875,
+            "support": 24
+          },
+          "authentication_failure": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 20
+          },
+          "billing_query": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 24
+          },
+          "compliance_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "configuration_help": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 17
+          },
+          "data_export": {
+            "precision": 0.906,
+            "recall": 1.0,
+            "support": 29
+          },
+          "data_residency": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 29
+          },
+          "database_issue": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "deployment_failure": {
+            "precision": 1.0,
+            "recall": 0.815,
+            "support": 27
+          },
+          "feature_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 20
+          },
+          "integration_help": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 21
+          },
+          "onboarding": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 22
+          },
+          "performance_degradation": {
+            "precision": 0.958,
+            "recall": 1.0,
+            "support": 23
+          },
+          "quota_or_overage": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 23
+          },
+          "rate_limit": {
+            "precision": 1.0,
+            "recall": 0.923,
+            "support": 13
+          },
+          "rollback_request": {
+            "precision": 0.875,
+            "recall": 1.0,
+            "support": 28
+          },
+          "security_incident": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "sso_configuration": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "unclear_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 15
+          },
+          "webhook_issue": {
+            "precision": 0.955,
+            "recall": 1.0,
+            "support": 21
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "deployment_failure",
+            "predicted": "rollback_request",
+            "count": 4
+          },
+          {
+            "true": "api_usage_question",
+            "predicted": "data_export",
+            "count": 3
+          },
+          {
+            "true": "deployment_failure",
+            "predicted": "webhook_issue",
+            "count": 1
+          },
+          {
+            "true": "rate_limit",
+            "predicted": "performance_degradation",
+            "count": 1
+          }
+        ]
+      },
+      "urgency": {
+        "accuracy": 0.478,
+        "macro_precision": 0.458,
+        "macro_recall": 0.449,
+        "macro_f1": 0.451,
+        "top3_accuracy": 1.0,
+        "ece_raw": 0.172,
+        "temperature": 2.85,
+        "ece_calibrated": 0.03,
+        "reliability": [
+          {
+            "bin": "0.3-0.4",
+            "n": 97,
+            "mean_confidence": 0.376,
+            "accuracy": 0.402
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 268,
+            "mean_confidence": 0.447,
+            "accuracy": 0.44
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 105,
+            "mean_confidence": 0.538,
+            "accuracy": 0.619
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 30,
+            "mean_confidence": 0.635,
+            "accuracy": 0.567
+          }
+        ],
+        "per_class": {
+          "high": {
+            "precision": 0.553,
+            "recall": 0.5,
+            "support": 146
+          },
+          "low": {
+            "precision": 0.314,
+            "recall": 0.258,
+            "support": 128
+          },
+          "medium": {
+            "precision": 0.506,
+            "recall": 0.588,
+            "support": 226
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "low",
+            "predicted": "medium",
+            "count": 77
+          },
+          {
+            "true": "high",
+            "predicted": "medium",
+            "count": 53
+          },
+          {
+            "true": "medium",
+            "predicted": "low",
+            "count": 52
+          },
+          {
+            "true": "medium",
+            "predicted": "high",
+            "count": 41
+          },
+          {
+            "true": "high",
+            "predicted": "low",
+            "count": 20
+          }
+        ]
+      }
+    },
+    "knn_emb": {
+      "intent": {
+        "accuracy": 0.986,
+        "macro_precision": 0.987,
+        "macro_recall": 0.986,
+        "macro_f1": 0.986,
+        "top3_accuracy": 0.998,
+        "ece_raw": 0.039,
+        "temperature": 0.5,
+        "ece_calibrated": 0.009,
+        "reliability": [
+          {
+            "bin": "0.4-0.5",
+            "n": 2,
+            "mean_confidence": 0.481,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 7,
+            "mean_confidence": 0.529,
+            "accuracy": 0.714
+          },
+          {
+            "bin": "0.8-0.9",
+            "n": 14,
+            "mean_confidence": 0.851,
+            "accuracy": 0.929
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 477,
+            "mean_confidence": 0.993,
+            "accuracy": 0.996
+          }
+        ],
+        "per_class": {
+          "account_access": {
+            "precision": 0.957,
+            "recall": 1.0,
+            "support": 22
+          },
+          "api_key_issue": {
+            "precision": 1.0,
+            "recall": 0.944,
+            "support": 18
+          },
+          "api_usage_question": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 24
+          },
+          "authentication_failure": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 20
+          },
+          "billing_query": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 24
+          },
+          "compliance_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "configuration_help": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 17
+          },
+          "data_export": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 29
+          },
+          "data_residency": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 29
+          },
+          "database_issue": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "deployment_failure": {
+            "precision": 1.0,
+            "recall": 0.815,
+            "support": 27
+          },
+          "feature_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 20
+          },
+          "integration_help": {
+            "precision": 0.875,
+            "recall": 1.0,
+            "support": 21
+          },
+          "onboarding": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 22
+          },
+          "performance_degradation": {
+            "precision": 0.958,
+            "recall": 1.0,
+            "support": 23
+          },
+          "quota_or_overage": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 23
+          },
+          "rate_limit": {
+            "precision": 1.0,
+            "recall": 0.923,
+            "support": 13
+          },
+          "rollback_request": {
+            "precision": 0.933,
+            "recall": 1.0,
+            "support": 28
+          },
+          "security_incident": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "sso_configuration": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "unclear_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 15
+          },
+          "webhook_issue": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 21
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "deployment_failure",
+            "predicted": "integration_help",
+            "count": 3
+          },
+          {
+            "true": "deployment_failure",
+            "predicted": "rollback_request",
+            "count": 2
+          },
+          {
+            "true": "rate_limit",
+            "predicted": "performance_degradation",
+            "count": 1
+          },
+          {
+            "true": "api_key_issue",
+            "predicted": "account_access",
+            "count": 1
+          }
+        ]
+      },
+      "urgency": {
+        "accuracy": 0.478,
+        "macro_precision": 0.45,
+        "macro_recall": 0.449,
+        "macro_f1": 0.446,
+        "top3_accuracy": 1.0,
+        "ece_raw": 0.184,
+        "temperature": 6.0,
+        "ece_calibrated": 0.041,
+        "reliability": [
+          {
+            "bin": "0.3-0.4",
+            "n": 251,
+            "mean_confidence": 0.37,
+            "accuracy": 0.402
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 112,
+            "mean_confidence": 0.431,
+            "accuracy": 0.473
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 102,
+            "mean_confidence": 0.532,
+            "accuracy": 0.578
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 23,
+            "mean_confidence": 0.642,
+            "accuracy": 0.696
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 2,
+            "mean_confidence": 0.723,
+            "accuracy": 0.5
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 10,
+            "mean_confidence": 0.98,
+            "accuracy": 0.9
+          }
+        ],
+        "per_class": {
+          "high": {
+            "precision": 0.523,
+            "recall": 0.541,
+            "support": 146
+          },
+          "low": {
+            "precision": 0.322,
+            "recall": 0.227,
+            "support": 128
+          },
+          "medium": {
+            "precision": 0.506,
+            "recall": 0.58,
+            "support": 226
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "low",
+            "predicted": "medium",
+            "count": 74
+          },
+          {
+            "true": "high",
+            "predicted": "medium",
+            "count": 54
+          },
+          {
+            "true": "medium",
+            "predicted": "low",
+            "count": 48
+          },
+          {
+            "true": "medium",
+            "predicted": "high",
+            "count": 47
+          },
+          {
+            "true": "low",
+            "predicted": "high",
+            "count": 25
+          }
+        ]
+      }
+    },
+    "tfidf_lr": {
+      "intent": {
+        "accuracy": 0.982,
+        "macro_precision": 0.985,
+        "macro_recall": 0.983,
+        "macro_f1": 0.982,
+        "top3_accuracy": 0.986,
+        "ece_raw": 0.161,
+        "temperature": 0.45,
+        "ece_calibrated": 0.01,
+        "reliability": [
+          {
+            "bin": "0.1-0.2",
+            "n": 3,
+            "mean_confidence": 0.179,
+            "accuracy": 0.667
+          },
+          {
+            "bin": "0.3-0.4",
+            "n": 4,
+            "mean_confidence": 0.364,
+            "accuracy": 0.25
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 3,
+            "mean_confidence": 0.44,
+            "accuracy": 0.333
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 2,
+            "mean_confidence": 0.564,
+            "accuracy": 0.5
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 1,
+            "mean_confidence": 0.676,
+            "accuracy": 1.0
+          },
+          {
+            "bin": "0.7-0.8",
+            "n": 2,
+            "mean_confidence": 0.716,
+            "accuracy": 0.0
+          },
+          {
+            "bin": "0.9-1.0",
+            "n": 485,
+            "mean_confidence": 0.998,
+            "accuracy": 1.0
+          }
+        ],
+        "per_class": {
+          "account_access": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 22
+          },
+          "api_key_issue": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 18
+          },
+          "api_usage_question": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 24
+          },
+          "authentication_failure": {
+            "precision": 0.741,
+            "recall": 1.0,
+            "support": 20
+          },
+          "billing_query": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 24
+          },
+          "compliance_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "configuration_help": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 17
+          },
+          "data_export": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 29
+          },
+          "data_residency": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 29
+          },
+          "database_issue": {
+            "precision": 0.963,
+            "recall": 1.0,
+            "support": 26
+          },
+          "deployment_failure": {
+            "precision": 1.0,
+            "recall": 0.741,
+            "support": 27
+          },
+          "feature_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 20
+          },
+          "integration_help": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 21
+          },
+          "onboarding": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 22
+          },
+          "performance_degradation": {
+            "precision": 0.958,
+            "recall": 1.0,
+            "support": 23
+          },
+          "quota_or_overage": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 23
+          },
+          "rate_limit": {
+            "precision": 1.0,
+            "recall": 0.923,
+            "support": 13
+          },
+          "rollback_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 28
+          },
+          "security_incident": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "sso_configuration": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 26
+          },
+          "unclear_request": {
+            "precision": 1.0,
+            "recall": 1.0,
+            "support": 15
+          },
+          "webhook_issue": {
+            "precision": 1.0,
+            "recall": 0.952,
+            "support": 21
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "deployment_failure",
+            "predicted": "authentication_failure",
+            "count": 7
+          },
+          {
+            "true": "rate_limit",
+            "predicted": "performance_degradation",
+            "count": 1
+          },
+          {
+            "true": "webhook_issue",
+            "predicted": "database_issue",
+            "count": 1
+          }
+        ]
+      },
+      "urgency": {
+        "accuracy": 0.5,
+        "macro_precision": 0.476,
+        "macro_recall": 0.469,
+        "macro_f1": 0.471,
+        "top3_accuracy": 1.0,
+        "ece_raw": 0.193,
+        "temperature": 3.4,
+        "ece_calibrated": 0.046,
+        "reliability": [
+          {
+            "bin": "0.3-0.4",
+            "n": 97,
+            "mean_confidence": 0.375,
+            "accuracy": 0.423
+          },
+          {
+            "bin": "0.4-0.5",
+            "n": 277,
+            "mean_confidence": 0.449,
+            "accuracy": 0.505
+          },
+          {
+            "bin": "0.5-0.6",
+            "n": 110,
+            "mean_confidence": 0.544,
+            "accuracy": 0.527
+          },
+          {
+            "bin": "0.6-0.7",
+            "n": 16,
+            "mean_confidence": 0.622,
+            "accuracy": 0.688
+          }
+        ],
+        "per_class": {
+          "high": {
+            "precision": 0.561,
+            "recall": 0.507,
+            "support": 146
+          },
+          "low": {
+            "precision": 0.319,
+            "recall": 0.281,
+            "support": 128
+          },
+          "medium": {
+            "precision": 0.549,
+            "recall": 0.619,
+            "support": 226
+          }
+        },
+        "top_confusions": [
+          {
+            "true": "low",
+            "predicted": "medium",
+            "count": 70
+          },
+          {
+            "true": "medium",
+            "predicted": "low",
+            "count": 50
+          },
+          {
+            "true": "high",
+            "predicted": "medium",
+            "count": 45
+          },
+          {
+            "true": "medium",
+            "predicted": "high",
+            "count": 36
+          },
+          {
+            "true": "high",
+            "predicted": "low",
+            "count": 27
+          }
+        ]
+      }
+    }
+  }
+}

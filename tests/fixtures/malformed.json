@@ -1,0 +1,234 @@
+[
+ {
+  "ticket_id": "T-010",
+  "channel": "email",
+  "subject": "Empty",
+  "body": "   ",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "channel": "chat",
+  "subject": "",
+  "body": "no id here",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-012",
+  "channel": "sms",
+  "subject": "",
+  "body": "text by sms",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-013",
+  "channel": "email",
+  "subject": "Tier",
+  "body": "gold tier customer",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "gold",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-014",
+  "channel": "forum",
+  "subject": "Numeric",
+  "body": 12345,
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-015",
+  "channel": "email",
+  "subject": "First",
+  "body": "first copy",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-015",
+  "channel": "email",
+  "subject": "Second",
+  "body": "second copy",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ {
+  "ticket_id": "T-016",
+  "channel": "chat",
+  "subject": "",
+  "body": "hidden\u0000 chars\u200b here",
+  "received_at": "2026-03-14T09:22:00Z",
+  "customer_id": "CUST-1",
+  "customer_name": "Test Person",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent",
+  "labels": {
+   "intent": "rate_limit",
+   "urgency": "low",
+   "expected_route": "auto_respond",
+   "answerable_from_docs": true,
+   "expected_doc_ids": [
+    "DOC-API-001"
+   ],
+   "must_not_auto_respond": false
+  },
+  "history": {
+   "first_contact_resolution": true,
+   "resolution_time_minutes": 12,
+   "csat_rating": 4,
+   "escalated": false,
+   "repeat_contact": false
+  }
+ },
+ "not an object"
+]

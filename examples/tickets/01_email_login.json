@@ -1,0 +1,9 @@
+{
+  "ticket_id": "EX-EMAIL-1",
+  "channel": "email",
+  "subject": "Cannot log in",
+  "body": "I keep getting an invalid credentials message when I sign in to the console, even though my password is correct. It worked fine last week.",
+  "customer_tier": "business",
+  "customer_region": "europe",
+  "language_fluency": "fluent"
+}

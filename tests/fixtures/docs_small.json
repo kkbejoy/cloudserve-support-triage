@@ -1,0 +1,31 @@
+[
+ {
+  "doc_id": "DOC-T-LOGIN",
+  "title": "Fixing login password errors",
+  "category": "authentication",
+  "applies_to": "Console",
+  "content": "# Fixing login password errors\n\n**Applies to:** Console\n\n## Symptoms\n\n- login rejected with invalid password\n- locked account banner\n\n## Common causes\n\n- too many failed password attempts\n\n## Resolution\n\n1. wait thirty minutes for the lock to clear\n2. clear browser cookies\n\n## Notes\n\nRepeated lockouts suggest an automated script.",
+  "related_docs": [
+   "DOC-T-INVOICE"
+  ],
+  "last_reviewed_days_ago": 0
+ },
+ {
+  "doc_id": "DOC-T-INVOICE",
+  "title": "Understanding your invoice",
+  "category": "billing",
+  "applies_to": "All plans",
+  "content": "# Understanding your invoice\n\n**Applies to:** All plans\n\n## Symptoms\n\n- invoice total higher than expected\n\n## Common causes\n\n- usage overage charges this month\n\n## Resolution\n\n1. open the usage breakdown page\n2. compare billing period usage\n\n## Notes\n\nInvoices close at month end.",
+  "related_docs": [],
+  "last_reviewed_days_ago": 0
+ },
+ {
+  "doc_id": "DOC-T-WEBHOOK",
+  "title": "Webhook delivery retries",
+  "category": "api",
+  "applies_to": "All plans",
+  "content": "# Webhook delivery retries\n\n**Applies to:** All plans\n\n## Symptoms\n\n- webhook events not delivered\n- duplicate webhook deliveries\n\n## Common causes\n\n- endpoint returned an error status\n\n## Resolution\n\n1. return a 2xx status quickly\n2. make handlers idempotent\n\n## Notes\n\nRetries use exponential backoff.",
+  "related_docs": [],
+  "last_reviewed_days_ago": 0
+ }
+]

@@ -1,0 +1,9 @@
+{
+  "ticket_id": "EX-CHAT-1",
+  "channel": "chat",
+  "subject": "",
+  "body": "how do i go back to the previous release? the one we deployed this morning has errors",
+  "customer_tier": "standard",
+  "customer_region": "asia_pacific",
+  "language_fluency": "non_fluent"
+}
