@@ -1,0 +1,9 @@
+{
+  "ticket_id": "EX-DOCS-1",
+  "channel": "docs_comment",
+  "subject": "Webhook retries",
+  "body": "This page does not say how many times a failed webhook delivery is retried. Our endpoint was down for an hour - will we get duplicates?",
+  "customer_tier": "enterprise",
+  "customer_region": "north_america",
+  "language_fluency": "fluent"
+}

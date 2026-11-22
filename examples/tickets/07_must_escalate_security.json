@@ -1,0 +1,9 @@
+{
+  "ticket_id": "EX-ESC-1",
+  "channel": "email",
+  "subject": "Possible breach",
+  "body": "We found one of our API keys posted in a public repository and there are calls from an IP address we do not recognise. We think we have been compromised.",
+  "customer_tier": "enterprise",
+  "customer_region": "europe",
+  "language_fluency": "fluent"
+}

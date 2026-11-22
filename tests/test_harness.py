@@ -154,3 +154,14 @@ def test_T11e_guardrails_send_supported_answers_and_block_unsupported(parts, tmp
     blocked = [r for r in rows if r["final_action"] == "block"]
     assert all(r["answer"] is None and r["acknowledgement"] and r["escalation_note"]["draft_answer"]
                and r["guardrails_fired"] == ["grounding"] for r in blocked)
+
+
+def test_T18f_model_down_for_the_whole_run_still_completes_and_reconciles(parts, tmp_path):
+    from src.llm import LLMUnavailable
+    d, make = parts
+    down = FakeLLM(LLMUnavailable("HTTP 503 service unavailable"))
+    m = run(str(d / "in.json"), str(tmp_path / "down"), **make(down, True, FakeLLM(LLMUnavailable("down"))))
+    v, g = m["volume"], m["governance"]
+    assert v["answered_automatically"] == 0 and v["processing_errors"] == 0
+    assert v["provider_unavailable"] > 0 and v["degraded_run"] is True
+    assert g["log_reconciled"] and g["tickets_with_logged_decision"] == m["volume"]["tickets_processed"]

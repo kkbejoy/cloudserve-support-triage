@@ -22,6 +22,7 @@ from src.classify import Classification
 from src.config import get_settings
 from src.llm import LLM, LLMUnavailable, get_llm
 from src.models import Ticket
+from src.privacy import redact
 from src.prompts import fill, load_prompt, neutralise_tags
 from src.retrieve import RetrievalResult, RetrievedArticle
 
@@ -108,7 +109,7 @@ class Generator:
         sent = select_articles(articles, self.max_articles, self.margin)
         ids = [a.doc_id for a in sent]
         prompt = fill(template, passages=_passages(sent), channel=ticket.channel,
-                      ticket_text=neutralise_tags(ticket.text, "ticket", "passages"))
+                      ticket_text=neutralise_tags(redact(ticket.text), "ticket", "passages"))
         last_err, tokens = None, 0
         for attempt in range(2):                          # one retry on unparseable output
             try:
@@ -174,7 +175,7 @@ class Generator:
                           urgency=cls.urgency, urgency_confidence=f"{cls.urgency_confidence:.2f}",
                           routing_reason=why, passages_or_none=", ".join(note.relevant_doc_ids) or "none",
                           draft_or_none=note.draft_answer or "none", channel=ticket.channel,
-                          ticket_text=neutralise_tags(ticket.text, "ticket"))
+                          ticket_text=neutralise_tags(redact(ticket.text), "ticket"))
             data = _parse(self.llm.complete(prompt, max_tokens=400).text)
             note.summary = str(data.get("summary") or note.summary)
             note.already_known = [str(x) for x in (data.get("already_known") or [])][:10]

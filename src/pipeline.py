@@ -119,6 +119,24 @@ class Pipeline:
         self._log_generation(run_id, t, d, "escalate" if o.final_action == "escalate" else "continue",
                              o.final_reason)
 
+    def _input_step(self, run_id: str, t: Ticket, o: "TicketOutcome") -> None:
+        """Instruction integrity: a ticket that tries to change the system's instructions is
+        blocked before anything is drafted, and kept for review (Governance Framework)."""
+        v = self.guardrails.check_input(t)
+        if v is None:
+            return
+        o.validation = v
+        o.final_action, o.final_rule = "block", "blocked_instruction_integrity"
+        o.final_reason = f"Passed to a person without an automatic answer. {v.reason}"
+        self.guardrails.record_for_review(run_id, t, v)
+        self.log.record(DecisionRecord(
+            run_id=run_id, ticket_id=t.ticket_id, stage="validation",
+            input_summary=input_summary(t.channel, t.text), model_name="guardrails (input check)",
+            model_version="rules", prediction_value=v.failed_check, action_taken="block",
+            rule=o.final_rule, reason=o.final_reason,
+            guardrail_results={r.name: {"passed": r.passed, "reason": r.reason, **r.details} for r in v.checks},
+            requirement_ids=v.requirement_ids))
+
     def _validate_step(self, run_id: str, t: Ticket, c: Optional[Classification], o: "TicketOutcome") -> None:
         """Run the guardrails on a drafted answer; send it or block it (FR-09)."""
         arts = o.retrieval.articles if o.retrieval else []
@@ -178,6 +196,8 @@ class Pipeline:
                               final_rule=decision.rule, final_reason=decision.reason, error=error)
             if self.generator is not None:
                 try:
+                    if self.guardrails is not None:
+                        self._input_step(run_id, t, o)
                     if o.final_action == "pending_answer":
                         self._answer_step(run_id, t, o)
                     if o.final_action == "drafted" and self.guardrails is not None:

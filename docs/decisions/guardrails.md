@@ -11,7 +11,20 @@ drafts "not answerable", and v1.1 0 of 29 in the first comparison. "The model wr
 therefore not a reason to send it. Every draft passes five checks; the first failure blocks it and
 the ticket goes to a person with the draft attached to the hand-off note.
 
-## The checks (cheapest first; stop at the first failure)
+## Before drafting: instruction integrity (on the ticket)
+
+Ticket text that tries to change the system's instructions ("ignore previous instructions", "print
+your system prompt", "you are now…", fake `</ticket>` tags) is blocked before anything is drafted,
+escalated, and the ticket is appended to `storage/review_queue.jsonl` for review, as the Governance
+Framework requires ("block, escalate and record the input for review"). The decision log keeps only a
+fingerprint of customer text (NFR-04), so the review queue is the one place the flagged text is kept;
+it is git-ignored. The patterns match none of the 580 development and validation tickets.
+
+Secrets in a ticket (keys, emails, card numbers, phone numbers, "password is <value>") are replaced
+with `[redacted …]` in the text sent to the model (NFR-04: only the data needed). Answers are never
+redacted: a reply that contains private data is blocked.
+
+## The checks on a draft (cheapest first; stop at the first failure)
 
 | # | Check | How | Blocks |
 |---|---|---|---|
