@@ -114,3 +114,15 @@ def test_T10d_generation_stage_logged_and_outcomes(pipeline):
                 assert o.acknowledgement and o.escalation_note and o.reply is None
             else:
                 assert o.reply and "prepared automatically" in o.reply
+
+
+def test_T05a_same_ticket_twice_gets_the_same_routing_decision(pipeline):
+    """A5: the threshold is applied deterministically - same input, same decision."""
+    pipe, d = pipeline
+    ingest = load_tickets(d / "t.json")
+    first = pipe.process(pipe.log.start_run("a", len(ingest.tickets), {}), ingest.tickets)
+    second = pipe.process(pipe.log.start_run("b", len(ingest.tickets), {}), ingest.tickets)
+    for a, b in zip(first, second):
+        assert (a.routing.action, a.routing.rule, a.final_action) == (b.routing.action, b.routing.rule, b.final_action)
+        assert a.classification.intent == b.classification.intent
+        assert a.classification.intent_confidence == b.classification.intent_confidence
