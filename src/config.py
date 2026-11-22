@@ -78,6 +78,13 @@ class Settings:
     generation_max_articles: int = _int("GENERATION_MAX_ARTICLES", 2)
     generation_score_margin: float = _float("GENERATION_SCORE_MARGIN", 0.10)
     generation_max_tokens: int = _int("GENERATION_MAX_TOKENS", 400)
+    # guardrails (B-09): the grounding check (PR-04) can use its own provider/model, which on
+    # free tiers gives it its own daily allowance. Empty = same as answer drafting.
+    grounding_provider: str = os.getenv("GROUNDING_PROVIDER", "").strip()
+    grounding_model: str = os.getenv("GROUNDING_MODEL", "").strip()
+    # true = a sentence the checker calls "partial" still passes (default: strict, it blocks)
+    grounding_allow_partial: bool = os.getenv("GROUNDING_ALLOW_PARTIAL", "false").strip().lower() in (
+        "true", "1", "yes", "on")
     # use the LLM (PR-03) for escalation notes; false = deterministic template (no API calls)
     escalation_note_llm: bool = os.getenv("ESCALATION_NOTE_LLM", "false").strip().lower() in (
         "true", "1", "yes", "on")

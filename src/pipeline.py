@@ -1,6 +1,6 @@
 """The processing chain for tickets, shared by the evaluation harness and the API.
 
-    classify -> retrieve -> route -> generate (B-08) -> (validate: B-09, not yet built)
+    classify -> retrieve -> route -> generate (B-08) -> validate (B-09 guardrails) -> send / block
 
 Every step's decision is written to the decision log. A failure on one ticket never stops
 the batch: the ticket is escalated with the error recorded (A9, A11), so logged decisions
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from src.classify import Classification, Classifier
 from src.generate import Draft, EscalationNote, Generator
+from src.guardrails import Guardrails, Verdict
 from src.logging_store import DecisionLog, DecisionRecord, input_summary
 from src.models import Ticket
 from src.retrieve import RetrievalResult, Retriever
@@ -24,8 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 # Final action per ticket. Nothing is sent until the guardrails pass it (B-09):
+#   auto_respond    drafted AND every guardrail passed: the answer is sent
+#   block           drafted but a guardrail failed: not sent, escalated to a person
+#   escalate        routed or drafted to a person for another reason
 #   pending_answer  router cleared it, no generator configured
-#   drafted         an answer was drafted, awaiting guardrails - NOT sent, NOT counted as resolved
+#   drafted         an answer was drafted, no guardrails configured - NOT sent, NOT counted as resolved
 FINAL_ACTIONS = ("auto_respond", "escalate", "block", "pending_answer", "drafted")
 
 
@@ -41,14 +45,17 @@ class TicketOutcome(BaseModel):
     reply: Optional[str] = None                  # customer-facing answer (only if eventually sent)
     acknowledgement: Optional[str] = None        # immediate reply to an escalated customer (FR-12)
     escalation_note: Optional[EscalationNote] = None   # hand-off for the agent (FR-08)
+    validation: Optional[Verdict] = None
     error: Optional[str] = None
 
 
 class Pipeline:
     def __init__(self, classifier: Classifier, retriever: Retriever, router: Router,
-                 log: DecisionLog, generator: Optional[Generator] = None) -> None:
+                 log: DecisionLog, generator: Optional[Generator] = None,
+                 guardrails: Optional[Guardrails] = None) -> None:
         self.classifier, self.retriever, self.router, self.log = classifier, retriever, router, log
         self.generator = generator
+        self.guardrails = guardrails
 
     def _log_classification(self, run_id: str, t: Ticket, c: Classification) -> None:
         self.log.record(DecisionRecord(
@@ -112,6 +119,34 @@ class Pipeline:
         self._log_generation(run_id, t, d, "escalate" if o.final_action == "escalate" else "continue",
                              o.final_reason)
 
+    def _validate_step(self, run_id: str, t: Ticket, c: Optional[Classification], o: "TicketOutcome") -> None:
+        """Run the guardrails on a drafted answer; send it or block it (FR-09)."""
+        arts = o.retrieval.articles if o.retrieval else []
+        v = self.guardrails.check(t, o.draft, arts, c)
+        o.validation = v
+        if v.passed:
+            if v.cited_answer:   # the answer as sent, with a citation on every claim (FR-06)
+                o.draft = o.draft.model_copy(update={"answer": v.cited_answer,
+                                                     "cited_doc_ids": v.cited_doc_ids or o.draft.cited_doc_ids})
+                o.reply = self.generator.compose_reply(o.draft, arts) if self.generator else o.reply
+            o.final_action, o.final_rule = "auto_respond", "guardrails_passed"
+            o.final_reason = (f"Answered automatically from {', '.join(o.draft.cited_doc_ids) or 'the cited article'}: "
+                              "all guardrail checks passed.")
+        else:
+            o.final_action, o.final_rule = "block", f"blocked_{v.failed_check}"
+            o.final_reason = f"Drafted answer blocked and passed to a person. {v.reason}"
+            o.reply = None
+        self.log.record(DecisionRecord(
+            run_id=run_id, ticket_id=t.ticket_id, stage="validation",
+            input_summary=input_summary(t.channel, t.text),
+            model_name="guardrails" + (" + fact-check (LLM)" if v.prompt_version else ""),
+            model_version=v.model, prediction_value="passed" if v.passed else v.failed_check,
+            sources_used=[{"doc_id": d} for d in o.draft.cited_doc_ids],
+            threshold_applied=self.guardrails.threshold, action_taken=o.final_action, rule=o.final_rule,
+            reason=o.final_reason, prompt_version=v.prompt_version,
+            guardrail_results={r.name: {"passed": r.passed, "reason": r.reason, **r.details} for r in v.checks},
+            requirement_ids=["FR-09"] if v.passed else v.requirement_ids))
+
     def process(self, run_id: str, tickets: List[Ticket]) -> List[TicketOutcome]:
         """Process a batch. One classification call for all tickets, then retrieve and route each."""
         try:
@@ -145,13 +180,16 @@ class Pipeline:
                 try:
                     if o.final_action == "pending_answer":
                         self._answer_step(run_id, t, o)
-                    if o.final_action == "escalate":
+                    if o.final_action == "drafted" and self.guardrails is not None:
+                        self._validate_step(run_id, t, c, o)
+                    if o.final_action in ("escalate", "block"):
                         o.acknowledgement = self.generator.acknowledgement(t, retrieval)
                         o.escalation_note = self.generator.escalation_note(t, c, o.final_reason, retrieval, o.draft)
                 except Exception as exc:   # never lose a ticket (A9, A11)
                     logger.exception("answer step failed for %s", t.ticket_id)
                     o.final_action, o.final_rule = "escalate", "processing_error"
-                    o.final_reason = "An internal error occurred while drafting; passed to a person."
+                    o.final_reason = "An internal error occurred while drafting or checking; passed to a person."
+                    o.reply = None
                     o.error = f"{type(exc).__name__}: {exc}"[:300]
             outcomes.append(o)
         return outcomes

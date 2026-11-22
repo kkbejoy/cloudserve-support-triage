@@ -9,7 +9,7 @@ Only tickets that routing clears go to drafting, so only those are sampled. Iden
 drafted once. The sample is: up to --per-group tickets labelled NOT answerable (the gap) and the
 same number labelled answerable, chosen with a fixed seed so every version sees the same tickets.
 Replies are cached, so a re-run costs no tokens. The table is printed and saved to
-evaluation/results/prompt_comparison_<time>.md.
+evaluation/results/prompt_comparison_<time>.md, with every draft in the matching .jsonl.
 
 Two numbers matter:
   caught           not-answerable tickets the prompt refused   (higher is better)
@@ -21,6 +21,7 @@ answerable once and not answerable once), so neither number can reach its ideal.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import random
 from datetime import datetime
@@ -63,9 +64,13 @@ def evaluate(sample: List[dict], version: str) -> Dict[str, object]:
     gen.prompt_version = version
     res = {"version": version, "not_answerable": 0, "caught": 0, "answerable": 0, "wrongly_refused": 0,
            "errors": 0, "tokens": 0, "refusal_reasons": {}}
-    examples = []
+    examples, per_ticket = [], []
     for item in sample:
         d = gen.draft_answer(item["ticket"], item["retrieval"].articles)
+        per_ticket.append({"version": version, "ticket_id": item["ticket"].ticket_id,
+                           "labelled_answerable": item["answerable"], "model_answerable": d.answerable,
+                           "uncertainty": d.uncertainty, "error": d.error, "passages": d.passage_doc_ids,
+                           "answer": d.answer, "ticket_text": item["ticket"].text})
         res["tokens"] += d.tokens
         if d.error:
             res["errors"] += 1
@@ -83,6 +88,7 @@ def evaluate(sample: List[dict], version: str) -> Dict[str, object]:
             key = (d.uncertainty or "?").strip()[:1].lower()
             res["refusal_reasons"][key] = res["refusal_reasons"].get(key, 0) + 1
     res["wrongly_refused_examples"] = examples
+    res["per_ticket"] = per_ticket
     llm = gen._llm
     res["llm"] = {k: getattr(llm, k, None) for k in ("name", "calls", "cache_hits", "failures")} if llm else {}
     return res
@@ -100,6 +106,7 @@ def main() -> None:
     n_not = sum(not s["answerable"] for s in sample)
     print(f"Sample: {len(sample)} unique cleared tickets ({n_not} not answerable, {len(sample) - n_not} answerable)")
     pct = lambda a, b: f"{100 * a / b:.0f}%" if b else "-"  # noqa: E731
+    per_ticket = []
     lines = [f"# PR-02 comparison - {datetime.now():%Y-%m-%d %H:%M}", "",
              f"Input `{args.input}`, {len(sample)} unique tickets cleared by routing "
              f"({n_not} labelled not answerable, {len(sample) - n_not} answerable).", "",
@@ -107,6 +114,7 @@ def main() -> None:
              "Refusals by test |", "|---|---|---|---|---|---|"]
     for v in [x.strip() for x in args.versions.split(",") if x.strip()]:
         r = evaluate(sample, v)
+        per_ticket += r["per_ticket"]
         lines.append(f"| {v} | {r['caught']}/{r['not_answerable']} ({pct(r['caught'], r['not_answerable'])}) | "
                      f"{r['wrongly_refused']}/{r['answerable']} ({pct(r['wrongly_refused'], r['answerable'])}) | "
                      f"{r['errors']} | {r['tokens']} | {r['refusal_reasons']} |")
@@ -116,7 +124,9 @@ def main() -> None:
     out = Path("evaluation/results") / f"prompt_comparison_{datetime.now():%Y%m%d_%H%M}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"Saved {out}")
+    detail = out.with_suffix(".jsonl")
+    detail.write_text("".join(json.dumps(x) + "\n" for x in per_ticket), encoding="utf-8")
+    print(f"Saved {out} and {detail} (one line per ticket: the draft and the model's reason)")
 
 
 if __name__ == "__main__":
