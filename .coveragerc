@@ -1,0 +1,14 @@
+# Coverage of the system itself: python -m pytest --cov
+# The one-off experiment scripts (chunking/prompt comparisons, threshold choice, routing sample)
+# produced the evidence in docs/decisions/ and are not part of the running system.
+[run]
+source = src, evaluation, scripts
+omit =
+    scripts/compare_chunking.py
+    scripts/compare_prompts.py
+    scripts/choose_threshold.py
+    scripts/route_sample.py
+
+[report]
+skip_empty = true
+show_missing = false

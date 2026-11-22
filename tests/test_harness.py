@@ -165,3 +165,17 @@ def test_T18f_model_down_for_the_whole_run_still_completes_and_reconciles(parts,
     assert v["answered_automatically"] == 0 and v["processing_errors"] == 0
     assert v["provider_unavailable"] > 0 and v["degraded_run"] is True
     assert g["log_reconciled"] and g["tickets_with_logged_decision"] == m["volume"]["tickets_processed"]
+
+
+def test_T07a_example_tickets_end_to_end(parts, tmp_path):
+    """The assessor's checks on examples/: guardrail tickets blocked, the security ticket escalated,
+    every ticket logged. Offline: fake model, synthetic classifier."""
+    d, make = parts
+    m = run("examples/all_examples.json", str(tmp_path / "ex"), **make(CitingFake(), True, CitingFake("yes")))
+    lines = (Path(m["run"]["output_dir"]) / "responses.jsonl").read_text().splitlines()
+    rows = {r["ticket_id"]: r for r in (json.loads(ln) for ln in lines)}
+    assert len(rows) == 7 and m["governance"]["log_reconciled"]
+    for tid in ("EX-GUARD-1", "EX-GUARD-2"):
+        assert rows[tid]["final_action"] == "block" and rows[tid]["rule"] == "blocked_instruction_integrity"
+    assert rows["EX-ESC-1"]["final_action"] in ("escalate", "block") and rows["EX-ESC-1"]["answer"] is None
+    assert all(r["final_action"] in ("auto_respond", "escalate", "block") for r in rows.values())
